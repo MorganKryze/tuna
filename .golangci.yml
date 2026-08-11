@@ -15,6 +15,7 @@ linters:
       # fails, because the failure means the terminal is already gone.
       # strings.Builder.Write is documented never to fail.
       exclude-functions:
+        - golang.org/x/term.Restore
         - (*os.File).Write
         - (*strings.Builder).Write
         - io.WriteString
