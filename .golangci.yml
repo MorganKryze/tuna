@@ -1,0 +1,21 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+linters:
+  enable:
+    - misspell
+  settings:
+    errcheck:
+      # Restoring the terminal on the way out and writing the escape codes
+      # that draw the picker: there is nothing useful to do when either
+      # fails, because the failure means the terminal is already gone.
+      # strings.Builder.Write is documented never to fail.
+      exclude-functions:
+        - (*os.File).Write
+        - (*strings.Builder).Write
+        - io.WriteString
+        - fmt.Fprintf
