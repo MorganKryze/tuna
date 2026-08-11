@@ -34,7 +34,8 @@ src/internal/
   port/         is this local port already taken?
   ui/           escape codes, when colour is allowed, column-aware padding,
                 and the one termios flag tuna clears
-scripts/shot.py the README's picture, redrawn from the real output
+scripts/shot.py the README's picture and the social card, redrawn from the
+                real output
 githooks/       pre-commit, installed by `just hooks`
 ```
 
@@ -105,12 +106,14 @@ which is why the entire reconnection policy is tested in microseconds.
   needs ordinary echo. No test covers the flag itself — checking it means a
   pty and a real keystroke — so it is checked by hand, against a build with
   the line removed, which is the only way to know the check would have failed.
-- **The picture in the README is generated, not taken.** `just shot` runs the
-  binary, parses its escape codes and draws the SVG, against
+- **The pictures are generated, not taken.** `just shot` runs the binary,
+  parses its escape codes and draws the SVGs, against
   `destinations.example.toml` in a throwaway XDG root — a screenshot of a real
   machine would publish internal addresses, and one taken by hand goes stale
   the first time the drawing moves. Re-run it in the same pull request that
-  changes the picker.
+  changes the picker. `docs/assets/social-card.png` is the one file that then
+  has to be uploaded by hand, under Settings → Social preview: GitHub has no
+  API for it and will not take the SVG.
 - **Say it before it fails, not after.** Anything knowable without launching
   ssh is shown in the picker and refused at launch — a local port already
   taken is the case that exists today. A diagnostic that arrives after a
