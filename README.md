@@ -131,11 +131,28 @@ process is the least fragile success signal available.
 from ssh's exit code, because a tunnel you cannot kill is the worst bug this
 program could have.
 
-Three failures skip the retries entirely and report ssh's own words, because
-all three would fail identically three times over: `Address already in use`
-(another tunnel already holds the local port), `Permission denied`, and
+Two failures skip the retries entirely and report ssh's own words, because
+both would fail identically three times over: `Permission denied` and
 `Could not resolve hostname`. Everything else — host down, network gone, wifi
 switched, laptop woken from sleep — is worth another try.
+
+A third, a local port already taken, never reaches ssh at all. It is knowable
+before launching — binding the port is the same syscall `ssh -L` is about to
+make — so the picker marks the destination before you choose it, and choosing
+it anyway fails with the port and a way to find out what holds it, instead of
+three lines of ssh diagnostics arriving after a banner that promised a tunnel:
+
+```text
+    control-plane   Duplicati du control-plane (Mongo Komodo)       ● 8201 pris
+```
+
+```text
+tuna: control-plane : le port local 8201 est déjà pris
+      lsof -nP -iTCP:8201 -sTCP:LISTEN   dit qui l'occupe
+```
+
+`Address already in use` stays on the hopeless list as a backstop: a port can
+be taken in the moment between the check and the launch.
 
 `-o ExitOnForwardFailure=yes` is always passed. Without it ssh stays connected
 with a dead forward and you find out from a browser tab, minutes later.

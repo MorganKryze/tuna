@@ -15,8 +15,8 @@ import (
 // It exists because the drawing is the one part of tuna a test cannot judge —
 // a golden test proves the columns line up, not that the thing reads well.
 // `tuna --preview` puts the frames on screen so a human can say.
-func Preview(dests []config.Destination, width, height int, color bool) string {
-	base := Picker{All: dests}
+func Preview(dests []config.Destination, busy map[string][]int, width, height int, color bool) string {
+	base := Picker{All: dests, Busy: busy}
 
 	states := []struct {
 		titre string

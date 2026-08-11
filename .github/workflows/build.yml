@@ -46,8 +46,8 @@ jobs:
           go test -covermode=atomic -coverprofile=cov.out ./...
           pct=$(go tool cover -func=cov.out | awk '/^total:/ {sub(/%/,"",$NF); print $NF}')
           echo "coverage: ${pct}%"
-          # Plancher calé sur la mesure du jour, 67,2 %, avec deux points de
-          # marge. Le total dit moins que le détail : ui est à 100 %, config et
+          # Plancher calé sur la mesure du jour, 68,8 %, avec trois points de
+          # marge. Le total dit moins que le détail : ui et port sont à 100 %, config et
           # tunnel à 97 %, recent à 94 %. Ce qui pèse en dessous, c'est
           # cmd/tuna (du câblage) et pick/term.go (le rendu, qui ne s'exerce
           # pas sans TTY) — ni l'un ni l'autre ne sera jamais couvert, par

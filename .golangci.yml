@@ -6,16 +6,14 @@ formatters:
     - goimports
 
 linters:
-  enable:
-    - misspell
+  # The default set: errcheck, govet, ineffassign, staticcheck, unused.
+  #
+  # misspell was here and is gone. It reads English, and every string this
+  # binary prints is French: it flagged "ressemble" as a typo for "resemble"
+  # and "conflit" for "conflict", and caught nothing real in between. An
+  # ignore list would have grown with the interface, one entry per French
+  # word that happens to look like an English typo.
   settings:
-    misspell:
-      # misspell reads English, and every string the binary prints is French.
-      # These are correct French words it mistakes for English typos; the list
-      # grows with the interface. If it ever grows faster than it catches
-      # anything, the linter is the thing to drop.
-      ignore-rules:
-        - ressemble
     errcheck:
       # Restoring the terminal on the way out and writing the escape codes
       # that draw the picker: there is nothing useful to do when either

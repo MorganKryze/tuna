@@ -22,7 +22,7 @@ var ErrNoChoice = errors.New("aucune destination choisie")
 //
 // The drawing goes to stderr rather than stdout, so tuna stays usable in a
 // pipe without the menu ending up in the data.
-func Pick(dests []config.Destination) (string, error) {
+func Pick(dests []config.Destination, busy map[string][]int) (string, error) {
 	tty := os.Stdin
 	if !term.IsTerminal(int(tty.Fd())) {
 		return "", errors.New("pas de terminal : donne le nom de la destination en argument")
@@ -37,7 +37,7 @@ func Pick(dests []config.Destination) (string, error) {
 
 	out := os.Stderr
 	color := ui.ColorOK(out)
-	p := Picker{All: dests}
+	p := Picker{All: dests, Busy: busy}
 	buf := make([]byte, 8)
 	for {
 		// Re-read the size every frame: a window resized mid-pick would

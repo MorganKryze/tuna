@@ -114,3 +114,28 @@ func TestNoColourMeansNoEscapeCodes(t *testing.T) {
 		t.Error("une séquence ANSI a survécu à color=false dans l'avis de reconnexion")
 	}
 }
+
+// The message this replaces was three lines of ssh diagnostics arriving after
+// a banner that had already promised a tunnel. What it owes the reader is the
+// port and a way to find out what has it.
+func TestBusyErrorNamesThePortAndHowToFindIt(t *testing.T) {
+	one := busyError("control-plane", []int{8201}).Error()
+	for _, attendu := range []string{"control-plane", "8201", "lsof -nP -iTCP:8201 -sTCP:LISTEN"} {
+		if !strings.Contains(one, attendu) {
+			t.Errorf("%q attendu dans :\n%s", attendu, one)
+		}
+	}
+	if !strings.Contains(one, "le port local") || !strings.Contains(one, "l'occupe") {
+		t.Errorf("un seul port doit se dire au singulier :\n%s", one)
+	}
+
+	many := busyError("hyperviseur", []int{9090, 9120}).Error()
+	if !strings.Contains(many, "les ports locaux") || !strings.Contains(many, "les occupe") {
+		t.Errorf("plusieurs ports doivent se dire au pluriel :\n%s", many)
+	}
+	// lsof takes its ports comma-separated with no space; a space there makes
+	// the command in the message one that does not run.
+	if !strings.Contains(many, "-iTCP:9090,9120 ") {
+		t.Errorf("la commande lsof doit être collable telle quelle :\n%s", many)
+	}
+}

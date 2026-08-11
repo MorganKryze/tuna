@@ -32,6 +32,11 @@ type Picker struct {
 	All    []config.Destination // already ordered by recency
 	Filter string
 	Cursor int
+	// Busy maps a destination name to the local ports already taken, probed
+	// once before the picker opened. A missing key means nothing is in the
+	// way. It is informational only: the authoritative check happens again
+	// at launch, because a port can be taken while the list is on screen.
+	Busy map[string][]int
 }
 
 // Matches is a plain substring match on name and description, case folded.

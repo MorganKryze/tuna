@@ -210,3 +210,36 @@ func TestAShortTerminalSaysWhatIsHidden(t *testing.T) {
 		t.Fatalf("la frame déborde de l'écran : %d lignes pour 12 de haut", n)
 	}
 }
+
+// A destination whose local port is already taken is a destination that
+// cannot open. Saying so in the list is the whole point: the alternative is
+// finding out from ssh, after a banner has promised a tunnel.
+func TestBusyPortsAreAnnouncedInTheList(t *testing.T) {
+	p := Picker{All: real(), Busy: map[string][]int{"control-plane": {8201}}}
+	frame := plain(p.Frame(80, 24, false))
+
+	if !strings.Contains(frame, "● 8201 pris") {
+		t.Fatalf("le port pris doit être annoncé :\n%s", frame)
+	}
+	// Only the destination concerned: the others still advertise their ports.
+	if !strings.Contains(frame, "8200") {
+		t.Errorf("les destinations libres gardent leurs ports :\n%s", frame)
+	}
+	if strings.Count(frame, "pris") != 1 {
+		t.Errorf("une seule ligne devait être marquée :\n%s", frame)
+	}
+}
+
+// The warning is longer than the port numbers it replaces, so the column has
+// to be sized with it — otherwise it is the thing that overflows the row.
+func TestABusyColumnStillFits(t *testing.T) {
+	busy := map[string][]int{"hyperviseur": {9090, 9120}, "gateway": {8200}, "control-plane": {8201}}
+	for width := 20; width <= 200; width++ {
+		p := Picker{All: real(), Busy: busy}
+		for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
+			if n := ui.Runes(l); n > width {
+				t.Fatalf("largeur %d : ligne de %d colonnes : %q", width, n, l)
+			}
+		}
+	}
+}

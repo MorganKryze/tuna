@@ -31,12 +31,13 @@ src/internal/
   recent/       the recency order: read it, bump a name to the front, write it
   pick/         the picker
   tunnel/       ssh arguments, failure classification, the reconnection loop
+  port/         is this local port already taken?
   ui/           escape codes, when colour is allowed, column-aware padding
 githooks/       pre-commit, installed by `just hooks`
 ```
 
 The dependency graph runs one way: `config` and `ui` know nothing; `recent`,
-`pick` and `tunnel` know `config`; `main` wires them. Keep it that way. A test
+`pick`, `tunnel` and `port` know `config`; `main` wires them. Keep it that way. A test
 lives beside the package it exercises.
 
 Inside a package, one file per concern, and the seam is always the same one —
@@ -94,6 +95,10 @@ which is why the entire reconnection policy is tested in microseconds.
   second with no terminal, no clock and no network. `Connect` takes an
   injectable `Runner`; it does not know `os/exec`. Code that touches the
   terminal or a process stays thin and untested, by construction.
+- **Say it before it fails, not after.** Anything knowable without launching
+  ssh is shown in the picker and refused at launch — a local port already
+  taken is the case that exists today. A diagnostic that arrives after a
+  banner has promised a tunnel is a diagnostic that arrived too late.
 - **Config errors are product.** Anything you can get wrong in the TOML must
   fail at startup, naming the file and the offending key, never in the middle
   of an `ssh`. A test proves it.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,4 +57,22 @@ func retrying(attempt, max int, wait time.Duration, color bool) string {
 		t.Wrap(ui.Warn, "⟳"),
 		t.Wrap(ui.Dim, fmt.Sprintf("connexion perdue — tentative %d/%d dans %s",
 			attempt, max, wait.Round(time.Second))))
+}
+
+// busyError is what replaces ssh's three lines of complaint when the local
+// port is already taken. It names the port and the one command that says who
+// has it, because "already in use" without "by what" is a question, not an
+// answer.
+func busyError(name string, taken []int) error {
+	ports := make([]string, len(taken))
+	for i, n := range taken {
+		ports[i] = strconv.Itoa(n)
+	}
+	quoi, qui := "le port local %s est déjà pris", "dit qui l'occupe"
+	if len(taken) > 1 {
+		quoi, qui = "les ports locaux %s sont déjà pris", "dit qui les occupe"
+	}
+	return fmt.Errorf("%s : "+fmt.Sprintf(quoi, strings.Join(ports, ", "))+
+		"\n      lsof -nP -iTCP:%s -sTCP:LISTEN   "+qui,
+		name, strings.Join(ports, ","))
 }

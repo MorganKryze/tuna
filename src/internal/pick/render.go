@@ -168,7 +168,11 @@ func (p Picker) row(t ui.Theme, d config.Destination, selected bool, nameW, desc
 		out += strings.Repeat(" ", gap) + desc
 	}
 	if portW > 0 {
-		out += strings.Repeat(" ", gap) + t.Wrap(ui.Dim, ui.FitRight(ports(d, labels), portW))
+		style := ui.Dim
+		if len(p.Busy[d.Name]) > 0 {
+			style = ui.Warn
+		}
+		out += strings.Repeat(" ", gap) + t.Wrap(style, ui.FitRight(p.ports(d, labels), portW))
 	}
 	return out
 }
@@ -181,8 +185,8 @@ func (p Picker) columns(width int) (nameW, descW, portW int, labels bool) {
 	var labelled, bare int
 	for _, d := range p.All {
 		nameW = max(nameW, ui.Runes(d.Name))
-		labelled = max(labelled, ui.Runes(ports(d, true)))
-		bare = max(bare, ui.Runes(ports(d, false)))
+		labelled = max(labelled, ui.Runes(p.ports(d, true)))
+		bare = max(bare, ui.Runes(p.ports(d, false)))
 	}
 	nameW = min(max(nameW, minNameW), maxNameW)
 	// The cap is not enough on its own: a very narrow terminal has less room
@@ -244,7 +248,17 @@ func highlight(s, filter string, t ui.Theme) string {
 
 // ports is the right-hand column. With labels it says what answers where;
 // without, the bare local ports, which is still the address you will type.
-func ports(d config.Destination, labels bool) string {
+//
+// A destination whose ports are already taken says so instead, because the
+// one thing worth knowing before choosing is that choosing will fail.
+func (p Picker) ports(d config.Destination, labels bool) string {
+	if taken := p.Busy[d.Name]; len(taken) > 0 {
+		out := make([]string, 0, len(taken))
+		for _, n := range taken {
+			out = append(out, fmt.Sprintf("%d", n))
+		}
+		return "● " + strings.Join(out, " ") + " pris"
+	}
 	out := make([]string, 0, len(d.Forward))
 	for _, f := range d.Forward {
 		if labels && f.Label != "" {

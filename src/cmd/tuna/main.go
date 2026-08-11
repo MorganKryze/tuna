@@ -20,6 +20,7 @@ import (
 
 	"github.com/MorganKryze/tuna/src/internal/config"
 	"github.com/MorganKryze/tuna/src/internal/pick"
+	"github.com/MorganKryze/tuna/src/internal/port"
 	"github.com/MorganKryze/tuna/src/internal/recent"
 	"github.com/MorganKryze/tuna/src/internal/tunnel"
 	"github.com/MorganKryze/tuna/src/internal/ui"
@@ -83,7 +84,7 @@ func showPreview() error {
 		width = w
 	}
 	ordered := recent.Order(cfg.Destination, recent.Load(recent.Path()))
-	fmt.Print(pick.Preview(ordered, width, height, ui.ColorOK(os.Stdout)))
+	fmt.Print(pick.Preview(ordered, port.BusyIn(ordered), width, height, ui.ColorOK(os.Stdout)))
 	return nil
 }
 
@@ -97,7 +98,8 @@ func launch(name string, noRetry bool) error {
 	if name == "" {
 		// The picker receives a list already in order: it does not sort, and
 		// recent does not know the picker exists.
-		if name, err = pick.Pick(recent.Order(cfg.Destination, recent.Load(statePath))); err != nil {
+		ordered := recent.Order(cfg.Destination, recent.Load(statePath))
+		if name, err = pick.Pick(ordered, port.BusyIn(ordered)); err != nil {
 			return err
 		}
 	}
@@ -105,6 +107,14 @@ func launch(name string, noRetry bool) error {
 	dest, ok := cfg.Find(name)
 	if !ok {
 		return fmt.Errorf("destination %q inconnue ; connues : %s", name, strings.Join(cfg.Names(), ", "))
+	}
+
+	// Checked before the banner and before ssh, because ssh finding out is
+	// three lines of diagnostics after a banner that promised a tunnel. The
+	// picker showed this already; `tuna <nom>` skipped the picker, and a port
+	// can be taken while the list is on screen either way.
+	if taken := port.BusyIn([]config.Destination{*dest}); len(taken[dest.Name]) > 0 {
+		return busyError(dest.Name, taken[dest.Name])
 	}
 
 	// Written before connecting, not after: a tunnel held open for hours
