@@ -53,7 +53,17 @@ jobs:
             dist/tuna-*
             dist/SHA256SUMS
 
+      # Téléverser dans une Release existante plutôt que la créer : les notes
+      # sont écrites à la main depuis .github/RELEASE_TEMPLATE.md, et
+      # `gh release create` avec ces notes est ce qui pose le tag et déclenche
+      # ce workflow. Le repli couvre le cas d'un tag poussé seul — mieux vaut
+      # des notes générées que pas de binaires.
       - name: publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+          fi
