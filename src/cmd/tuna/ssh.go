@@ -14,11 +14,14 @@ import (
 	"github.com/MorganKryze/tuna/src/internal/tunnel"
 )
 
+// upAfter is how long ssh has to survive before the tunnel counts as open.
+const upAfter = 3 * time.Second
+
 // sshRunner is the only code in the program that touches processes and
 // signals. It reports how long ssh lived and how it ended; tunnel.Connect
 // decides what that means. Keeping the two apart is what lets the whole
 // reconnection policy be tested without spawning anything.
-func sshRunner(d *config.Destination) tunnel.Result {
+func sshRunner(d *config.Destination, up func()) tunnel.Result {
 	cmd := exec.Command("ssh", tunnel.SSHArgs(d)...)
 	cmd.Stdin = os.Stdin // the host-key prompt and any passphrase need the TTY
 	cmd.Stdout = os.Stdout
@@ -37,7 +40,26 @@ func sshRunner(d *config.Destination) tunnel.Result {
 	defer signal.Stop(sig)
 
 	start := time.Now()
-	err := cmd.Run()
+
+	// "Still alive after a few seconds" is the signal that the tunnel came
+	// up. It is a proxy, and an honest one: -o ExitOnForwardFailure=yes makes
+	// ssh exit within a moment when a forward cannot be bound, so surviving
+	// this long means the forwards were accepted.
+	//
+	// ponytail: the exact answer would be to check that something is
+	// listening on the local ports, and both ways of asking are worse than
+	// the guess. Binding them races with ssh's own bind — and losing that
+	// race causes the very "address already in use" this would be reporting
+	// on. Dialling them opens a real connection through the tunnel to the
+	// service on the far side, which is a side effect a status message has
+	// no business having.
+	if err := cmd.Start(); err != nil {
+		return tunnel.Result{Stderr: err.Error(), Outcome: tunnel.OutcomeFailed}
+	}
+	upTimer := time.AfterFunc(upAfter, up)
+	defer upTimer.Stop()
+
+	err := cmd.Wait()
 	lived := time.Since(start)
 
 	outcome := tunnel.OutcomeFailed

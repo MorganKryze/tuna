@@ -33,16 +33,22 @@ type Result struct {
 	Outcome Outcome
 }
 
-type Runner func(d *config.Destination) Result
+// Runner launches the tunnel and blocks until it dies. It calls up once the
+// tunnel looks established, which is the only moment Connect cannot observe
+// for itself: it is inside run() for the whole life of the process.
+type Runner func(d *config.Destination, up func()) Result
 
 type Retry struct {
 	Max         int           // reconnection attempts per episode
 	StableAfter time.Duration // held this long = the episode is over
 	Sleep       func(time.Duration)
-	// Notify is told about each retry before it is waited out. ssh says
-	// nothing on the way down, so without this a dropped tunnel and a hung
-	// one look identical from the terminal. Optional: nil simply stays quiet.
+	// Notify is told about each retry before it is waited out, and OnUp when
+	// the tunnel comes up — with reconnected set when it is coming back
+	// rather than starting. ssh says nothing either way, so without these a
+	// dropped tunnel, a hung one and a recovered one all look alike from the
+	// terminal. Both optional: nil simply stays quiet.
 	Notify func(attempt, max int, wait time.Duration)
+	OnUp   func(reconnected bool)
 }
 
 func DefaultRetry() Retry {
@@ -56,9 +62,15 @@ func backoff(attempt int) time.Duration {
 // Connect runs the tunnel and keeps it up. It returns nil when the operator
 // closed it, and an error when it gave up.
 func Connect(d *config.Destination, run Runner, r Retry) error {
-	attempts := 0
+	attempts, launches := 0, 0
 	for {
-		res := run(d)
+		reconnected := launches > 0
+		res := run(d, func() {
+			if r.OnUp != nil {
+				r.OnUp(reconnected)
+			}
+		})
+		launches++
 
 		if res.Outcome == OutcomeInterrupted {
 			return nil

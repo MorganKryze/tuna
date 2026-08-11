@@ -30,9 +30,7 @@ func TestBannerLooksLikeThis(t *testing.T) {
 		"  ▌ hyperviseur   Cockpit + Komodo — racine d'admin\n" +
 		"\n" +
 		"    Cockpit   http://localhost:9090\n" +
-		"    Komodo    http://localhost:9120\n" +
-		"\n" +
-		"    Ctrl-C pour fermer\n\n"
+		"    Komodo    http://localhost:9120\n"
 	if got := banner(hyperviseur(), false); got != want {
 		t.Fatalf("bannière inattendue.\n--- obtenu ---\n%s\n--- attendu ---\n%s", got, want)
 	}
@@ -137,5 +135,56 @@ func TestBusyErrorNamesThePortAndHowToFindIt(t *testing.T) {
 	// the command in the message one that does not run.
 	if !strings.Contains(many, "-iTCP:9090,9120 ") {
 		t.Errorf("la commande lsof doit être collable telle quelle :\n%s", many)
+	}
+}
+
+// Four states, four lines, and the point of all of them is that ssh -N says
+// nothing: without them an open tunnel, a dropped one, a recovered one and a
+// closed one look identical from the terminal.
+func TestTheStatusLines(t *testing.T) {
+	cases := []struct {
+		nom, got, marqueur, texte string
+	}{
+		{"ouvert", established(false), "✓", "tunnel ouvert · Ctrl-C pour fermer"},
+		{"rétabli", restored(false), "✓", "connexion rétablie"},
+		{"fermé", closed(false), "✓", "tunnel fermé"},
+		{"perdu", retrying(1, 3, time.Second, false), "⟳", "tentative 1/3"},
+	}
+	for _, c := range cases {
+		t.Run(c.nom, func(t *testing.T) {
+			if !strings.Contains(c.got, c.marqueur) || !strings.Contains(c.got, c.texte) {
+				t.Fatalf("attendu %q et %q, obtenu %q", c.marqueur, c.texte, c.got)
+			}
+			// The same marker column as every other line, or they read as
+			// four unrelated notices instead of one conversation.
+			if !strings.HasPrefix(strings.TrimLeft(c.got, "\n"), "    ") {
+				t.Errorf("indentation attendue de 4 espaces : %q", c.got)
+			}
+			if !strings.HasSuffix(c.got, "\n") {
+				t.Errorf("la ligne doit se terminer, sinon ssh écrit à sa suite : %q", c.got)
+			}
+		})
+	}
+}
+
+// The banner no longer promises a way to close something that has not opened:
+// that sentence moved onto the line printed once the tunnel is actually up.
+func TestTheBannerDoesNotPromiseAnOpenTunnel(t *testing.T) {
+	if strings.Contains(banner(hyperviseur(), false), "Ctrl-C") {
+		t.Error("la bannière est imprimée avant que le tunnel existe : elle ne doit pas parler de le fermer")
+	}
+}
+
+func TestFailedKeepsSshsOwnWordsFirst(t *testing.T) {
+	got := plain(failed(busyError("control-plane", []int{8201}), false))
+	lines := strings.Split(strings.Trim(got, "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("attendu 2 lignes, obtenu %d : %q", len(lines), got)
+	}
+	if !strings.HasPrefix(lines[0], "    ✗ ") {
+		t.Errorf("la première ligne porte le marqueur : %q", lines[0])
+	}
+	if !strings.Contains(lines[1], "lsof") {
+		t.Errorf("le reste est indenté dessous : %q", lines[1])
 	}
 }

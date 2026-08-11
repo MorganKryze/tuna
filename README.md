@@ -17,7 +17,9 @@ Enter to open. `tuna --preview` prints that list without opening anything,
 which is also how the layout is checked at a width you do not have:
 `tuna --preview 60`.
 
-The tunnel then runs in the foreground, and Ctrl-C closes it:
+The tunnel then runs in the foreground and says what it is doing, because
+`ssh -N` says nothing at all — without these lines an open tunnel, a dropped
+one, a recovered one and a closed one look identical from the terminal:
 
 ```text
   ▌ hyperviseur   Cockpit + orchestrateur
@@ -25,7 +27,12 @@ The tunnel then runs in the foreground, and Ctrl-C closes it:
     Cockpit   http://localhost:9090
     Komodo    http://localhost:9120
 
-    Ctrl-C pour fermer
+    ✓ tunnel ouvert · Ctrl-C pour fermer
+
+    ⟳ connexion perdue — tentative 1/3 dans 1s
+    ✓ connexion rétablie
+
+    ✓ tunnel fermé
 ```
 
 tuna exists because `just admin`, `just edge` and `just cp-backup` were three
@@ -157,12 +164,15 @@ be taken in the moment between the check and the launch.
 `-o ExitOnForwardFailure=yes` is always passed. Without it ssh stays connected
 with a dead forward and you find out from a browser tab, minutes later.
 
-Each retry says so before it waits, because `ssh -N` says nothing on the way
-down and a terminal that has gone quiet for four seconds reads as a crash:
-
-```text
-    ⟳ connexion perdue — tentative 2/3 dans 2s
-```
+"Came up" is read from ssh surviving three seconds, which is a proxy and worth
+knowing as one: `-o ExitOnForwardFailure=yes` makes ssh exit within a moment
+when a forward cannot be bound, so surviving that long means the forwards were
+accepted. The case it gets wrong is a host that silently drops packets, where
+ssh sits in connect for a minute and tuna will have called it open. The exact
+answer would be to check that something is listening on the local port, and
+both ways of asking are worse: binding it races with ssh's own bind — losing
+that race causes the very failure it would be reporting on — and dialling it
+opens a real connection through the tunnel to the service on the far side.
 
 ## What tuna does not do
 

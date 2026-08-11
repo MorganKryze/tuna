@@ -15,7 +15,7 @@ type fake struct {
 	calls  int
 }
 
-func (f *fake) run(*config.Destination) Result {
+func (f *fake) run(*config.Destination, func()) Result {
 	r := f.script[min(f.calls, len(f.script)-1)]
 	f.calls++
 	return r
@@ -214,4 +214,49 @@ func TestDefaultRetryIsWhatTheReadmeSays(t *testing.T) {
 	if r.Sleep == nil {
 		t.Error("Sleep par défaut ne doit pas être nil : Connect l'appelle sans le vérifier")
 	}
+}
+
+// OnUp separates "it came up" from "it came back", because those two need
+// different words on screen and Connect is the only place that knows which
+// one just happened.
+func TestOnUpTellsAFirstStartFromAComeback(t *testing.T) {
+	var seen []bool
+	f := &fake{script: []Result{{Lived: 2 * time.Second, Outcome: OutcomeFailed}}}
+	r := testRetry()
+	r.OnUp = func(reconnected bool) { seen = append(seen, reconnected) }
+
+	// Every launch reports; only the first is not a reconnection.
+	_ = Connect(&config.Destination{Name: "a"}, func(d *config.Destination, up func()) Result {
+		up()
+		return f.run(d, up)
+	}, r)
+
+	if want := []bool{false, true, true, true}; len(seen) != len(want) {
+		t.Fatalf("attendu %d annonces, obtenu %v", len(want), seen)
+	} else {
+		for i := range want {
+			if seen[i] != want[i] {
+				t.Fatalf("annonce n°%d : attendu reconnected=%v, obtenu %v", i+1, want[i], seen[i])
+			}
+		}
+	}
+}
+
+// A tunnel that never comes up must not claim it did, and a nil OnUp must not
+// crash the loop.
+func TestOnUpIsOnlyCalledByTheRunner(t *testing.T) {
+	called := false
+	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
+	r := testRetry()
+	r.OnUp = func(bool) { called = true }
+	_ = Connect(&config.Destination{Name: "a"}, f.run, r)
+	if called {
+		t.Error("un runner qui n'appelle jamais up ne doit rien annoncer")
+	}
+
+	r.OnUp = nil
+	_ = Connect(&config.Destination{Name: "a"}, func(d *config.Destination, up func()) Result {
+		up() // nil OnUp: the closure Connect passes has to absorb this
+		return f.run(d, up)
+	}, r)
 }

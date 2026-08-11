@@ -35,7 +35,6 @@ func banner(d *config.Destination, color bool) string {
 		fmt.Fprintf(&b, "    %s   http://localhost:%d\n",
 			t.Wrap(ui.Dim, ui.Fit(label(d, f), labelW)), f.Local)
 	}
-	fmt.Fprintf(&b, "\n    %s\n\n", t.Wrap(ui.Dim, "Ctrl-C pour fermer"))
 	return b.String()
 }
 
@@ -48,12 +47,47 @@ func label(d *config.Destination, f config.Forward) string {
 	return d.Name
 }
 
+// The four lines a running tunnel can print. They share a marker column so
+// they read as one conversation rather than four unrelated notices, and every
+// one of them exists because ssh -N says nothing at all: without them an open
+// tunnel, a dropped one, a recovered one and a closed one look identical from
+// the terminal.
+func established(color bool) string {
+	t := ui.Theme(color)
+	return fmt.Sprintf("\n    %s %s\n", t.Wrap(ui.Ok, "✓"),
+		t.Wrap(ui.Dim, "tunnel ouvert · Ctrl-C pour fermer"))
+}
+
+func restored(color bool) string {
+	t := ui.Theme(color)
+	return fmt.Sprintf("    %s %s\n", t.Wrap(ui.Ok, "✓"), t.Wrap(ui.Dim, "connexion rétablie"))
+}
+
+// closed is what settles the question the silence used to leave open: whether
+// tuna stopped or is about to try again.
+func closed(color bool) string {
+	t := ui.Theme(color)
+	return fmt.Sprintf("\n    %s %s\n\n", t.Wrap(ui.Ok, "✓"), t.Wrap(ui.Dim, "tunnel fermé"))
+}
+
+// failed is the last line, and the only one in red. ssh's own words are kept
+// verbatim on the first line; anything tuna adds is indented under it.
+func failed(err error, color bool) string {
+	t := ui.Theme(color)
+	lines := strings.Split(err.Error(), "\n")
+	out := fmt.Sprintf("\n    %s %s\n", t.Wrap(ui.Err, "✗"), t.Wrap(ui.Bold, lines[0]))
+	for _, l := range lines[1:] {
+		out += t.Wrap(ui.Dim, l) + "\n"
+	}
+	return out + "\n"
+}
+
 // retrying is the line printed between two attempts. Without it a dropped
 // tunnel looks exactly like a hung one: ssh says nothing on the way down, and
 // a terminal that has gone quiet for four seconds reads as a crash.
 func retrying(attempt, max int, wait time.Duration, color bool) string {
 	t := ui.Theme(color)
-	return fmt.Sprintf("    %s %s\n",
+	return fmt.Sprintf("\n    %s %s\n",
 		t.Wrap(ui.Warn, "⟳"),
 		t.Wrap(ui.Dim, fmt.Sprintf("connexion perdue — tentative %d/%d dans %s",
 			attempt, max, wait.Round(time.Second))))

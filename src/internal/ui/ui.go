@@ -24,6 +24,8 @@ const (
 	Bold        = "\x1b[1m"
 	Accent      = "\x1b[36m"
 	Warn        = "\x1b[33m"
+	Ok          = "\x1b[32m"
+	Err         = "\x1b[31m"
 	Underline   = "\x1b[4m"
 	NoUnderline = "\x1b[24m"
 )

@@ -57,7 +57,7 @@ Configuration : %s
 		if errors.Is(err, pick.ErrNoChoice) {
 			return // Escape is not a failure
 		}
-		fmt.Fprintf(os.Stderr, "tuna: %v\n", err)
+		fmt.Fprint(os.Stderr, failed(err, ui.ColorOK(os.Stderr)))
 		os.Exit(1)
 	}
 }
@@ -122,7 +122,7 @@ func launch(name string, noRetry bool) error {
 	// crash would lose it entirely. A failure here is worth a warning and
 	// nothing more — it costs a list in the wrong order, not a tunnel.
 	if err := recent.Save(statePath, recent.Bump(recent.Load(statePath), dest.Name)); err != nil {
-		fmt.Fprintf(os.Stderr, "tuna: ordre de récence non enregistré : %v\n", err)
+		fmt.Fprint(os.Stderr, failed(fmt.Errorf("ordre de récence non enregistré : %w", err), ui.ColorOK(os.Stderr)))
 	}
 
 	// The banner goes to stdout: the URLs are the one thing worth piping
@@ -137,5 +137,19 @@ func launch(name string, noRetry bool) error {
 	retry.Notify = func(attempt, max int, wait time.Duration) {
 		fmt.Fprint(os.Stderr, retrying(attempt, max, wait, color))
 	}
-	return tunnel.Connect(dest, sshRunner, retry)
+	retry.OnUp = func(reconnected bool) {
+		if reconnected {
+			fmt.Fprint(os.Stderr, restored(color))
+			return
+		}
+		fmt.Fprint(os.Stderr, established(color))
+	}
+
+	if err := tunnel.Connect(dest, sshRunner, retry); err != nil {
+		return err
+	}
+	// Silence used to be the only sign that tuna had stopped rather than
+	// gone away to try again. This is the line that tells them apart.
+	fmt.Fprint(os.Stderr, closed(color))
+	return nil
 }
