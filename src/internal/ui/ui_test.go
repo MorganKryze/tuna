@@ -100,3 +100,23 @@ func unset(t *testing.T, key string) {
 		t.Fatal(err)
 	}
 }
+
+// HideControlEcho is called on whatever stdin happens to be, including a pipe
+// or a file. The branch that matters here is the one where there is no
+// terminal to change: it has to hand back a restore function anyway, because
+// every call site defers it without looking.
+func TestHideControlEchoSurvivesTheAbsenceOfATerminal(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = r.Close() }()
+	defer func() { _ = w.Close() }()
+
+	restore := HideControlEcho(r)
+	if restore == nil {
+		t.Fatal("un restore nil ferait paniquer un defer")
+	}
+	restore()
+	restore() // and twice, because a defer can outlive an early return
+}

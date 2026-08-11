@@ -133,6 +133,12 @@ func launch(name string, noRetry bool) error {
 	if noRetry {
 		retry.Max = 0
 	}
+	// From here on the terminal belongs to the tunnel, and the only thing on
+	// it should be what tuna and ssh say. The "^C" that used to land in the
+	// middle of that is the terminal driver echoing the keystroke, not a
+	// message from anyone.
+	defer ui.HideControlEcho(os.Stdin)()
+
 	color := ui.ColorOK(os.Stderr)
 	retry.Notify = func(attempt, max int, wait time.Duration) {
 		fmt.Fprint(os.Stderr, retrying(attempt, max, wait, color))

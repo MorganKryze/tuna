@@ -32,7 +32,8 @@ src/internal/
   pick/         the picker
   tunnel/       ssh arguments, failure classification, the reconnection loop
   port/         is this local port already taken?
-  ui/           escape codes, when colour is allowed, column-aware padding
+  ui/           escape codes, when colour is allowed, column-aware padding,
+                and the one termios flag tuna clears
 githooks/       pre-commit, installed by `just hooks`
 ```
 
@@ -84,8 +85,9 @@ which is why the entire reconnection policy is tested in microseconds.
 - **Dependencies: three, and a fourth needs an argument.** `BurntSushi/toml`
   because the standard library does not read TOML and TOML is the only
   hand-editable format that keeps comments — which the example config lives on.
-  `golang.org/x/term` for raw mode, and `golang.org/x/sys` behind it; both
-  official. A fourth needs the same case made in the pull request: what it
+  `golang.org/x/term` for raw mode and the terminal size, and `golang.org/x/sys`
+  for the one termios flag `x/term` does not expose; both official, and the
+  second was already there as the first one's own dependency. A fourth needs the same case made in the pull request: what it
   buys, what it costs in `go.sum`, and why the standard library cannot. The
   picker is hand-written on `x/term` because `bubbletea` pulls thirty-five
   modules — including a spring physics engine — to draw four lines.
@@ -95,6 +97,13 @@ which is why the entire reconnection policy is tested in microseconds.
   second with no terminal, no clock and no network. `Connect` takes an
   injectable `Runner`; it does not know `os/exec`. Code that touches the
   terminal or a process stays thin and untested, by construction.
+- **Only tuna writes on tuna's screen.** The `^C` a terminal used to print
+  when you closed a tunnel came from the terminal driver, not from here, and
+  it is cleared for the life of the tunnel (`ECHOCTL`, in `ui/echo.go`). One
+  flag, never raw mode: ssh still holds that terminal and its host-key prompt
+  needs ordinary echo. No test covers the flag itself — checking it means a
+  pty and a real keystroke — so it is checked by hand, against a build with
+  the line removed, which is the only way to know the check would have failed.
 - **Say it before it fails, not after.** Anything knowable without launching
   ssh is shown in the picker and refused at launch — a local port already
   taken is the case that exists today. A diagnostic that arrives after a

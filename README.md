@@ -183,7 +183,10 @@ opens a real connection through the tunnel to the service on the far side.
 | Several tunnels at once, a daemon, `stop`, logs | When several terminal tabs become a nuisance. The real cost is not the launching: it is PIDs, a state file, orphans after a crash, and logs to store and read. |
 | Mesh URLs, interactive ssh | Neither needs help. Mesh URLs already open in a browser; `ssh hypervisor` types fine on its own.                                                        |
 
-Colour follows [NO_COLOR](https://no-color.org) and never reaches a pipe, and
+Closing a tunnel leaves no `^C` behind: that character is echoed by the
+terminal driver rather than printed by tuna, and the flag responsible is
+cleared while a tunnel is running. Colour follows
+[NO_COLOR](https://no-color.org) and never reaches a pipe, and
 the layout gives way in a fixed order as the terminal narrows — port labels
 first, then the ports, then the descriptions — so nothing ever wraps.
 
