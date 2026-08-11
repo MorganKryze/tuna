@@ -12,12 +12,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
+
+	"golang.org/x/term"
 
 	"github.com/MorganKryze/tuna/src/internal/config"
 	"github.com/MorganKryze/tuna/src/internal/pick"
 	"github.com/MorganKryze/tuna/src/internal/recent"
 	"github.com/MorganKryze/tuna/src/internal/tunnel"
+	"github.com/MorganKryze/tuna/src/internal/ui"
 )
 
 // version is stamped by the release workflow; a local build says so.
@@ -25,17 +30,27 @@ var version = "dev"
 
 func main() {
 	noRetry := flag.Bool("no-retry", false, "une seule tentative, pas de reconnexion")
+	preview := flag.Bool("preview", false, "afficher la liste sans l'ouvrir, et sortir")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `tuna %s — ouvre un tunnel SSH d'admin.
 
   tuna              choisir dans la liste
   tuna <nom>        lancer directement
   tuna --no-retry   ne pas relancer si ça coupe
+  tuna --preview    voir à quoi ressemble la liste, sans rien ouvrir
 
 Configuration : %s
 `, version, config.Path())
 	}
 	flag.Parse()
+
+	if *preview {
+		if err := showPreview(); err != nil {
+			fmt.Fprintf(os.Stderr, "tuna: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	if err := launch(flag.Arg(0), *noRetry); err != nil {
 		if errors.Is(err, pick.ErrNoChoice) {
@@ -44,6 +59,32 @@ Configuration : %s
 		fmt.Fprintf(os.Stderr, "tuna: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// showPreview draws the picker without opening it, at the real terminal's
+// width when there is one and at 80 columns when there is not, so the output
+// is the same whether a human is looking or a test is capturing it.
+func showPreview() error {
+	cfg, err := config.Load(config.Path())
+	if err != nil {
+		return err
+	}
+	width, height := 80, 24
+	if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
+		width, height = w, h
+	}
+	// An explicit width is how the narrow-terminal fallbacks get looked at
+	// without owning a narrow terminal: `tuna --preview 60`.
+	if arg := flag.Arg(0); arg != "" {
+		w, err := strconv.Atoi(arg)
+		if err != nil || w < 20 {
+			return fmt.Errorf("largeur %q : attendu un nombre d'au moins 20", arg)
+		}
+		width = w
+	}
+	ordered := recent.Order(cfg.Destination, recent.Load(recent.Path()))
+	fmt.Print(pick.Preview(ordered, width, height, ui.ColorOK(os.Stdout)))
+	return nil
 }
 
 func launch(name string, noRetry bool) error {
@@ -74,18 +115,17 @@ func launch(name string, noRetry bool) error {
 		fmt.Fprintf(os.Stderr, "tuna: ordre de récence non enregistré : %v\n", err)
 	}
 
-	for _, f := range dest.Forward {
-		label := f.Label
-		if label == "" {
-			label = dest.Name
-		}
-		fmt.Printf("%-12s → http://localhost:%d\n", label, f.Local)
-	}
-	fmt.Fprintln(os.Stderr, "Ctrl-C pour fermer.")
+	// The banner goes to stdout: the URLs are the one thing worth piping
+	// somewhere. Everything else tuna says is on stderr.
+	fmt.Print(banner(dest, ui.ColorOK(os.Stdout)))
 
 	retry := tunnel.DefaultRetry()
 	if noRetry {
 		retry.Max = 0
+	}
+	color := ui.ColorOK(os.Stderr)
+	retry.Notify = func(attempt, max int, wait time.Duration) {
+		fmt.Fprint(os.Stderr, retrying(attempt, max, wait, color))
 	}
 	return tunnel.Connect(dest, sshRunner, retry)
 }

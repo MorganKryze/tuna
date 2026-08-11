@@ -4,18 +4,28 @@ Pick an admin tunnel from a list instead of remembering its name, and keep it
 alive when the wifi drops.
 
 ```text
-Destination : 
-> hyperviseur    Cockpit + orchestrateur  [Cockpit:9090 Komodo:9120]
-  vm-backup      Duplicati d'une VM, joignable seulement depuis l'hôte  [Duplicati:8201]
+  ❯ ▏tapez pour filtrer                                                      2/2
+
+  ▌ hyperviseur   Cockpit + orchestrateur                             9090  9120
+    vm-backup     Duplicati d'une VM, joignable seulement depuis l…         8201
+
+    ↑↓ naviguer    ⏎ ouvrir    ⎋ annuler
 ```
 
-Type to filter, arrows to move, Enter to open. The tunnel runs in the
-foreground and Ctrl-C closes it:
+Type to filter — the matched text is underlined as you go — arrows to move,
+Enter to open. `tuna --preview` prints that list without opening anything,
+which is also how the layout is checked at a width you do not have:
+`tuna --preview 60`.
+
+The tunnel then runs in the foreground, and Ctrl-C closes it:
 
 ```text
-Cockpit      → http://localhost:9090
-Komodo       → http://localhost:9120
-Ctrl-C pour fermer.
+  ▌ hyperviseur   Cockpit + orchestrateur
+
+    Cockpit   http://localhost:9090
+    Komodo    http://localhost:9120
+
+    Ctrl-C pour fermer
 ```
 
 tuna exists because `just admin`, `just edge` and `just cp-backup` were three
@@ -50,6 +60,7 @@ editor. There is no `tuna list` either — the picker **is** the list.
 tuna              # the picker, most recent destination on top
 tuna hyperviseur  # straight to it, no picker
 tuna --no-retry   # one attempt, no reconnection
+tuna --preview    # what the list looks like, without opening anything
 ```
 
 ## Configuration
@@ -129,6 +140,13 @@ switched, laptop woken from sleep — is worth another try.
 `-o ExitOnForwardFailure=yes` is always passed. Without it ssh stays connected
 with a dead forward and you find out from a browser tab, minutes later.
 
+Each retry says so before it waits, because `ssh -N` says nothing on the way
+down and a terminal that has gone quiet for four seconds reads as a crash:
+
+```text
+    ⟳ connexion perdue — tentative 2/3 dans 2s
+```
+
 ## What tuna does not do
 
 | Not here                | When to reconsider                                                                                                                                        |
@@ -137,6 +155,10 @@ with a dead forward and you find out from a browser tab, minutes later.
 | Opening the browser     | The day it genuinely grates. The URL is printed and terminals make it clickable, and it is ambiguous the moment a destination has two forwards.            |
 | Several tunnels at once, a daemon, `stop`, logs | When several terminal tabs become a nuisance. The real cost is not the launching: it is PIDs, a state file, orphans after a crash, and logs to store and read. |
 | Mesh URLs, interactive ssh | Neither needs help. Mesh URLs already open in a browser; `ssh hypervisor` types fine on its own.                                                        |
+
+Colour follows [NO_COLOR](https://no-color.org) and never reaches a pipe, and
+the layout gives way in a fixed order as the terminal narrows — port labels
+first, then the ports, then the descriptions — so nothing ever wraps.
 
 The interface speaks French, because that is who it was built for. The code and
 its comments are English.

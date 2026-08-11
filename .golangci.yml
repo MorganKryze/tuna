@@ -9,6 +9,13 @@ linters:
   enable:
     - misspell
   settings:
+    misspell:
+      # misspell reads English, and every string the binary prints is French.
+      # These are correct French words it mistakes for English typos; the list
+      # grows with the interface. If it ever grows faster than it catches
+      # anything, the linter is the thing to drop.
+      ignore-rules:
+        - ressemble
     errcheck:
       # Restoring the terminal on the way out and writing the escape codes
       # that draw the picker: there is nothing useful to do when either
@@ -17,6 +24,8 @@ linters:
       exclude-functions:
         - golang.org/x/term.Restore
         - (*os.File).Write
+        - fmt.Fprint
+        - fmt.Fprintln
         - (*strings.Builder).Write
         - io.WriteString
         - fmt.Fprintf

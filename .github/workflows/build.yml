@@ -46,9 +46,9 @@ jobs:
           go test -covermode=atomic -coverprofile=cov.out ./...
           pct=$(go tool cover -func=cov.out | awk '/^total:/ {sub(/%/,"",$NF); print $NF}')
           echo "coverage: ${pct}%"
-          # Plancher calé sur la mesure du jour, 62,3 %, avec deux points de
-          # marge. Le total dit moins que le détail : tunnel est à 100 %,
-          # config à 98 %, recent à 94 %. Ce qui pèse en dessous, c'est
+          # Plancher calé sur la mesure du jour, 67,2 %, avec deux points de
+          # marge. Le total dit moins que le détail : ui est à 100 %, config et
+          # tunnel à 97 %, recent à 94 %. Ce qui pèse en dessous, c'est
           # cmd/tuna (du câblage) et pick/term.go (le rendu, qui ne s'exerce
           # pas sans TTY) — ni l'un ni l'autre ne sera jamais couvert, par
           # construction.
@@ -56,5 +56,5 @@ jobs:
           # À relever dès que la mesure réelle le permet : un plancher sous la
           # réalité ne protège de rien, un plancher au-dessus bloque tout le
           # monde sans rien prouver.
-          awk -v p="$pct" 'BEGIN { exit (p + 0 >= 60) ? 0 : 1 }' \
-            || { echo "::error::couverture ${pct}% sous le plancher de 60%"; exit 1; }
+          awk -v p="$pct" 'BEGIN { exit (p + 0 >= 65) ? 0 : 1 }' \
+            || { echo "::error::couverture ${pct}% sous le plancher de 65%"; exit 1; }

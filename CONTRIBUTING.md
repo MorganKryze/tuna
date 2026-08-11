@@ -31,12 +31,13 @@ src/internal/
   recent/       the recency order: read it, bump a name to the front, write it
   pick/         the picker
   tunnel/       ssh arguments, failure classification, the reconnection loop
+  ui/           escape codes, when colour is allowed, column-aware padding
 githooks/       pre-commit, installed by `just hooks`
 ```
 
-The dependency graph runs one way: `config` knows nothing; `recent`, `pick`
-and `tunnel` know `config`; `main` wires them. Keep it that way. A test lives
-beside the package it exercises.
+The dependency graph runs one way: `config` and `ui` know nothing; `recent`,
+`pick` and `tunnel` know `config`; `main` wires them. Keep it that way. A test
+lives beside the package it exercises.
 
 Inside a package, one file per concern, and the seam is always the same one —
 what can be tested without the world, and what cannot:
@@ -44,13 +45,24 @@ what can be tested without the world, and what cannot:
 ```text
 pick/pick.go     Picker, Matches, Update: pure, state + keystroke → state
 pick/keys.go     readKey: bytes → keystroke, pure
-pick/term.go     render and Pick: the only code that touches a terminal
+pick/render.go   Frame: state + width + height + colour → a string, pure
+pick/preview.go  the frames --preview shows, pure
+pick/term.go     Pick: the only code that touches a terminal
 tunnel/tunnel.go Connect: the state machine, driven by an injectable Runner
 tunnel/args.go   SSHArgs
 tunnel/hopeless.go  which stderr means retrying is pointless
 config/config.go    types, paths, loading
 config/validate.go  what a valid destinations.toml is
 ```
+
+**Drawing is a pure function too.** `Frame(width, height, colour) string` takes
+its terminal as arguments instead of reading one, which is what lets the layout
+be asserted at every width from 20 to 200 columns — and looked at, with
+`tuna --preview 60`. Two rules come with it, both enforced by tests: no line
+may ever exceed the width, because a wrapped line makes the frame taller than
+it is counted to be and the redraw then erases the wrong rows; and colour must
+never change the geometry, so the same frame with and without escape codes has
+to lay out identically.
 
 `term.go` and `main.go` are the only files allowed to be thin and untested.
 Everything they do beyond drawing or wiring lives in a package that is tested

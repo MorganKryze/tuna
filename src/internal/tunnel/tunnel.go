@@ -39,6 +39,10 @@ type Retry struct {
 	Max         int           // reconnection attempts per episode
 	StableAfter time.Duration // held this long = the episode is over
 	Sleep       func(time.Duration)
+	// Notify is told about each retry before it is waited out. ssh says
+	// nothing on the way down, so without this a dropped tunnel and a hung
+	// one look identical from the terminal. Optional: nil simply stays quiet.
+	Notify func(attempt, max int, wait time.Duration)
 }
 
 func DefaultRetry() Retry {
@@ -78,6 +82,10 @@ func Connect(d *config.Destination, run Runner, r Retry) error {
 			}
 			return fmt.Errorf("%s : abandon après %d tentatives de reconnexion", d.Name, r.Max)
 		}
-		r.Sleep(backoff(attempts))
+		wait := backoff(attempts)
+		if r.Notify != nil {
+			r.Notify(attempts, r.Max, wait)
+		}
+		r.Sleep(wait)
 	}
 }
