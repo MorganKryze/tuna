@@ -1,0 +1,59 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  binaries:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # publie les binaires sur la Release
+      id-token: write # signe l'attestation de provenance, sans clé
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+      # Compilation croisée plutôt que goreleaser : quatre binaires sans
+      # dépendance C ne valent pas une action de plus à épingler et à suivre.
+      - name: build
+        run: |
+          set -eu
+          mkdir -p dist
+          version="${GITHUB_REF_NAME}"
+          for target in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64; do
+            os="${target%%/*}"; arch="${target##*/}"
+            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 \
+              go build -trimpath -ldflags "-s -w -X main.version=$version" \
+              -o "dist/tuna-${os}-${arch}" .
+          done
+          cd dist && sha256sum tuna-* > SHA256SUMS
+
+      # Dit quel workflow, à quel commit, a produit exactement ces octets.
+      # Vérification : gh attestation verify tuna-… --repo MorganKryze/tuna
+      #
+      # Avant la publication, pas après. Une attestation est indexée par
+      # l'empreinte du fichier et vit dans le magasin d'attestations de GitHub,
+      # pas sur la Release : elle se fait tant que les binaires sont encore
+      # des fichiers locaux. Publier d'abord laisserait, en cas d'échec ici,
+      # des binaires téléchargeables pour lesquels `gh attestation verify`
+      # répond « aucune attestation » — ce qui se lit comme une falsification
+      # plutôt que comme un workflow cassé.
+      #
+      # SHA256SUMS en fait partie : il est publié à côté et on lui fait la
+      # même confiance, donc il lui faut la même preuve.
+      - uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: |
+            dist/tuna-*
+            dist/SHA256SUMS
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes

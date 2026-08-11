@@ -1,0 +1,28 @@
+name: security
+
+on:
+  # Le déclencheur qui compte : c'est lui qui signale une CVE dans une
+  # dépendance sans attendre le prochain commit.
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [main]
+  # Pas de filtre `paths` ici non plus : ce job est une vérification requise,
+  # et une vérification requise qui ne tourne jamais laisse une pull request
+  # de documentation en attente pour toujours.
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...

@@ -1,0 +1,57 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  # Pas de filtre `paths` : ce sont des vérifications requises, et une
+  # vérification requise qui ne tourne jamais laisse une pull request de
+  # documentation en attente pour toujours.
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: latest
+
+  test:
+    # Le runner ssh et le rendu du terminal sont propres à Unix ; le reste est
+    # portable. Les deux systèmes tournent parce que la boucle de reconnexion
+    # est le genre de code qui casse sur une différence de WaitStatus.
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+      - name: measure and gate
+        run: |
+          go test -covermode=atomic -coverprofile=cov.out ./...
+          pct=$(go tool cover -func=cov.out | awk '/^total:/ {sub(/%/,"",$NF); print $NF}')
+          echo "coverage: ${pct}%"
+          # Plancher calé sur la mesure du jour, 50,6 %. Le chiffre paraît bas
+          # et il est honnête : main.go n'est que du câblage, et le rendu du
+          # picker ne s'exerce pas sans TTY — ensemble, ils pèsent la moitié
+          # des instructions et ne seront jamais couverts. Tout le reste l'est
+          # à 100 %. À relever dès que la mesure réelle le permet ; un plancher
+          # sous la réalité ne protège de rien, un plancher au-dessus bloque
+          # tout le monde sans rien prouver.
+          awk -v p="$pct" 'BEGIN { exit (p + 0 >= 50) ? 0 : 1 }' \
+            || { echo "::error::couverture ${pct}% sous le plancher de 50%"; exit 1; }

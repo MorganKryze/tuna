@@ -12,9 +12,13 @@ import (
 	"time"
 )
 
+// version is stamped by the release workflow; a local build says so.
+var version = "dev"
+
 func main() {
 	noRetry := flag.Bool("no-retry", false, "une seule tentative, pas de reconnexion")
 	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "tuna %s\n", version)
 		fmt.Fprintf(os.Stderr, `tuna — ouvre un tunnel SSH d'admin.
 
   tuna              choisir dans la liste
