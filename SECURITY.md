@@ -38,16 +38,15 @@ without waiting for the next commit.
 tuna's attack surface is small on purpose: it makes no network connection of
 its own, listens on nothing, and stores no secret. It reads one TOML file,
 writes one file of names, and executes `ssh` with an argument list. Everything
-that authenticates — keys, the agent, `known_hosts`, the host-key prompt —
-belongs to ssh and to your `~/.ssh/config`, which is precisely why tuna
-delegates rather than reimplementing any of it.
+that authenticates belongs to ssh and to your `~/.ssh/config`: keys, the agent,
+`known_hosts`, the host-key prompt. That is why tuna delegates instead of
+reimplementing any of it.
 
 The interesting reports are therefore about the argument list: a value in
 `destinations.toml` that turns into an ssh option it should not, or a `host`
 that ends up read as something other than a target. Note that
-`destinations.toml` is trusted input — it is your own file — so "a malicious
-config can do X" is only interesting if X escapes what editing that file could
-already do.
+`destinations.toml` is trusted input — it is your own file — so "a malicious config
+can do X" only matters if X escapes what editing that file could already do.
 
 One operational note rather than a vulnerability: `destinations.toml` describes
 internal addresses and non-standard ssh ports. Keep it in `~/.config`, out of

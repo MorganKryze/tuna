@@ -19,7 +19,7 @@ func TestSSHArgsCarryEveryField(t *testing.T) {
 		},
 	}), " ")
 
-	for _, attendu := range []string{
+	for _, want := range []string{
 		"-N",
 		"-o ExitOnForwardFailure=yes",
 		"-J mon-hote",
@@ -27,14 +27,14 @@ func TestSSHArgsCarryEveryField(t *testing.T) {
 		"-L 8201:127.0.0.1:8200",
 		"-L 9120:10.0.0.5:9120",
 	} {
-		if !strings.Contains(got, attendu) {
-			t.Errorf("args ssh sans %q : %s", attendu, got)
+		if !strings.Contains(got, want) {
+			t.Errorf("ssh args without %q: %s", want, got)
 		}
 	}
 	// The host is what ssh reads as its target: anything after it is taken
 	// as a remote command, which -N forbids.
 	if !strings.HasSuffix(got, "debian@10.0.0.5") {
-		t.Errorf("l'hôte doit être le dernier argument : %s", got)
+		t.Errorf("the host has to be the last argument: %s", got)
 	}
 }
 
@@ -44,7 +44,7 @@ func TestSSHArgsOmitWhatIsNotSet(t *testing.T) {
 		Forward: []config.Forward{{Local: 9090, To: "127.0.0.1:9090"}},
 	}), " ")
 	if strings.Contains(got, "-J") || strings.Contains(got, "-p") {
-		t.Errorf("un champ vide ne doit produire aucun drapeau : %s", got)
+		t.Errorf("an empty field must produce no flag: %s", got)
 	}
 }
 
@@ -57,7 +57,7 @@ func TestSSHArgsAreSeparateElements(t *testing.T) {
 	})
 	for _, a := range args {
 		if strings.Contains(a, " ") {
-			t.Fatalf("un argument contient une espace : %q dans %v", a, args)
+			t.Fatalf("an argument contains a space: %q in %v", a, args)
 		}
 	}
 }

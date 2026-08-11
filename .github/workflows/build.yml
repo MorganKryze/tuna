@@ -3,9 +3,8 @@ name: build
 on:
   push:
     branches: [main]
-  # Pas de filtre `paths` : ce sont des vérifications requises, et une
-  # vérification requise qui ne tourne jamais laisse une pull request de
-  # documentation en attente pour toujours.
+  # No `paths` filter: these are required checks, and a required check that
+  # never runs leaves a docs-only pull request waiting forever.
   pull_request:
     branches: [main]
 
@@ -29,15 +28,15 @@ jobs:
           version: latest
 
   test:
-    # Le runner ssh et le rendu du terminal sont propres à Unix ; le reste est
-    # portable. Les deux systèmes tournent parce que la boucle de reconnexion
-    # est le genre de code qui casse sur une différence de WaitStatus.
+    # The ssh runner and the terminal drawing are Unix-only; the rest is
+    # portable. Both systems run because the reconnection loop is the kind of
+    # code that breaks on a difference in WaitStatus.
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: write # publie les badges sur la branche orpheline `badges`
+      contents: write # publishes the badges to the orphan `badges` branch
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -45,40 +44,38 @@ jobs:
           go-version: stable
       - name: measure and gate
         run: |
-          # Une exécution, deux nombres. C'est `-json` qui rend le compte
-          # possible, donc la sortie lisible est reconstruite depuis le même
-          # fichier en cas d'échec : sinon une build rouge affiche un mur de
-          # JSON et rien de lisible.
+          # One run, two numbers. -json is what makes the count possible, so
+          # the human output is rebuilt from the same file when it fails:
+          # otherwise a red build shows a wall of JSON and nothing readable.
           if ! go test -covermode=atomic -coverpkg=./src/... \
             -coverprofile=cov.out -json ./src/... > tests.json; then
             jq -r 'select(.Action == "output") | .Output' tests.json | tail -60
             exit 1
           fi
-          # Sous-tests compris : un cas de table qui peut échouer seul est un
-          # test. Dédupliqué par paquet et par nom, sinon un paquet testé deux
-          # fois dans une même exécution compterait deux fois.
+          # Subtests included, since a table case that can fail on its own is
+          # a test. Deduplicated by package and name: a package tested twice
+          # in one run would otherwise count twice.
           count=$(jq -r 'select(.Action == "pass" and .Test != null)
             | "\(.Package)\t\(.Test)"' tests.json | sort -u | wc -l | tr -d ' ')
           pct=$(go tool cover -func=cov.out | awk '/^total:/ {sub(/%/,"",$NF); print $NF}')
           echo "coverage: ${pct}%, ${count} tests"
           echo "PCT=$pct" >> "$GITHUB_ENV"
           echo "TESTS=$count" >> "$GITHUB_ENV"
-          # Plancher calé sur la mesure du jour, 68,8 %, avec trois points de
-          # marge. Le total dit moins que le détail : ui et port sont à 100 %, config et
-          # tunnel à 97 %, recent à 94 %. Ce qui pèse en dessous, c'est
-          # cmd/tuna (du câblage) et pick/term.go (le rendu, qui ne s'exerce
-          # pas sans TTY) — ni l'un ni l'autre ne sera jamais couvert, par
-          # construction.
+          # A floor set from today's measurement, with a few points of slack.
+          # The total says less than the breakdown: ui and port are at 100%,
+          # config and tunnel at 97%, recent at 94%. What sits below is
+          # cmd/tuna, which is wiring, and pick/term.go, the drawing that no
+          # test can exercise without a TTY. Neither will ever be covered.
           #
-          # À relever dès que la mesure réelle le permet : un plancher sous la
-          # réalité ne protège de rien, un plancher au-dessus bloque tout le
-          # monde sans rien prouver.
+          # Raise it whenever the real measurement allows. A floor under
+          # reality protects nothing; a floor above it blocks everyone and
+          # proves nothing.
           awk -v p="$pct" 'BEGIN { exit (p + 0 >= 65) ? 0 : 1 }' \
-            || { echo "::error::couverture ${pct}% sous le plancher de 65%"; exit 1; }
+            || { echo "::error::coverage ${pct}% is under the 65% floor"; exit 1; }
 
-      # Un seul système publie, sinon les deux se poussent dessus à tour de
-      # rôle sur la même branche. ubuntu parce que c'est celui qui compte le
-      # plus de tests : le runner ssh en a de spécifiques à Unix.
+      # One system publishes, or the two take turns overwriting each other on
+      # the same branch. ubuntu, because it is the one that counts the most
+      # tests: the ssh runner has Unix-only ones.
       - name: publish badges
         if: matrix.os == 'ubuntu-latest' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: bash .github/badges.sh "$PCT" "$TESTS"

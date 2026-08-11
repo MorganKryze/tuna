@@ -1,9 +1,9 @@
 #!/bin/sh
-# Installé par `just hooks`. Ce qui casse la CI doit casser ici d'abord :
-# un aller-retour de trente secondes en local vaut mieux qu'un rouge dans
-# une pull request cinq minutes plus tard.
+# Installed by `just hooks`. Whatever breaks CI has to break here first: a
+# thirty-second round trip locally beats a red pull request five minutes
+# later.
 set -e
 
-gofmt -l . | grep . && { echo "gofmt: fichiers non formatés ci-dessus"; exit 1; }
+gofmt -l . | grep . && { echo "gofmt: the files above are not formatted"; exit 1; }
 go vet ./...
 go test ./...

@@ -143,7 +143,7 @@ def frames_of(binary, cols):
 
 def write(path, body):
     path.write_text(body + "\n")
-    print(f"  {path.name}  {len(body) // 1024 or 1} ko")
+    print(f"  {path.name}  {len(body) // 1024 or 1} kB")
 
 
 def main():
@@ -156,8 +156,8 @@ def main():
         assets / "picker.svg",
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:.0f}" height="{h:.0f}"'
         f' viewBox="0 0 {w:.0f} {h:.0f}" role="img"'
-        f' aria-label="La liste des destinations de tuna">\n'
-        f"<title>tuna — choisir sa destination au lieu de la mémoriser</title>\n"
+        f' aria-label="the tuna destination list">\n'
+        f"<title>tuna — pick your destination instead of remembering it</title>\n"
         + "\n".join(body)
         + "\n</svg>",
     )
@@ -172,11 +172,11 @@ def main():
         f'<text x="{cw // 2}" y="152" fill="#f0f6fc" text-anchor="middle"'
         f' font-family="{MONO}" font-size="78" font-weight="700">tuna</text>',
         f'<text x="{cw // 2}" y="208" fill="#39c5cf" text-anchor="middle"'
-        f' font-family="{SANS}" font-size="27">choisir sa destination au lieu'
-        f" de la mémoriser</text>",
+        f' font-family="{SANS}" font-size="27">pick your destination instead of'
+        f" remembering it</text>",
         f'<text x="{cw // 2}" y="248" fill="#6e7681" text-anchor="middle"'
-        f' font-family="{SANS}" font-size="19">un tunnel SSH d’admin qui survit'
-        f" à un wifi qui saute</text>",
+        f' font-family="{SANS}" font-size="19">an admin SSH tunnel that survives'
+        f" a wifi drop</text>",
     ]
     card += panel(lines, (cw - w) / 2, 310, cols)[0] + ["</svg>"]
     write(assets / "social-card.svg", "\n".join(card))
@@ -191,9 +191,9 @@ def main():
              "-o", str(png), str(assets / "social-card.svg")],
             check=True,
         )
-        print(f"  {png.name}  {png.stat().st_size // 1024} ko")
+        print(f"  {png.name}  {png.stat().st_size // 1024} kB")
     else:
-        print("  (rsvg-convert absent : social-card.png non régénérée)")
+        print("  (no rsvg-convert: social-card.png left as it was)")
 
 
 if __name__ == "__main__":

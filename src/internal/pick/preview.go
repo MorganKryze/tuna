@@ -22,7 +22,7 @@ func Preview(dests []config.Destination, busy map[string][]int, width, height in
 		titre string
 		p     Picker
 	}{
-		{"à l'ouverture", base},
+		{"on opening", base},
 	}
 	if len(dests) > 1 {
 		down := base
@@ -30,7 +30,7 @@ func Preview(dests []config.Destination, busy map[string][]int, width, height in
 		states = append(states, struct {
 			titre string
 			p     Picker
-		}{"curseur sur la deuxième ligne", down})
+		}{"cursor on the second row", down})
 	}
 	// A filter taken from the data itself, so the preview shows a real match
 	// rather than an invented one.
@@ -40,14 +40,14 @@ func Preview(dests []config.Destination, busy map[string][]int, width, height in
 		states = append(states, struct {
 			titre string
 			p     Picker
-		}{fmt.Sprintf("filtre « %s »", needle), f})
+		}{fmt.Sprintf("filter %q", needle), f})
 	}
 	empty := base
 	empty.Filter = "zzz"
 	states = append(states, struct {
 		titre string
 		p     Picker
-	}{"filtre sans correspondance", empty})
+	}{"filter matching nothing", empty})
 
 	var b strings.Builder
 	for _, s := range states {

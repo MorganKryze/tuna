@@ -15,14 +15,14 @@ func plain(s string) string { return ansi.ReplaceAllString(s, "") }
 
 func real() []config.Destination {
 	return []config.Destination{
-		{Name: "hyperviseur", Desc: "Cockpit + Komodo — racine d'admin", Forward: []config.Forward{
+		{Name: "hypervisor", Desc: "Cockpit and Komodo, the admin root", Forward: []config.Forward{
 			{Local: 9090, To: "127.0.0.1:9090", Label: "Cockpit"},
 			{Local: 9120, To: "10.10.10.10:9120", Label: "Komodo"},
 		}},
-		{Name: "gateway", Desc: "Duplicati du gateway", Forward: []config.Forward{
+		{Name: "gateway", Desc: "Duplicati on the gateway", Forward: []config.Forward{
 			{Local: 8200, To: "127.0.0.1:8200", Label: "Duplicati"},
 		}},
-		{Name: "control-plane", Desc: "Duplicati du control-plane (Mongo Komodo)", Forward: []config.Forward{
+		{Name: "control-plane", Desc: "Duplicati on the control plane, Komodo's Mongo", Forward: []config.Forward{
 			{Local: 8201, To: "127.0.0.1:8200", Label: "Duplicati"},
 		}},
 	}
@@ -42,15 +42,15 @@ func TestFrameLooksLikeThis(t *testing.T) {
 	got := plain(Picker{All: real()}.Frame(80, 24, false))
 	want := "" +
 		"\r\n" +
-		"  ❯ ▏tapez pour filtrer                                                      3/3\r\n" +
+		"  ❯ ▏type to filter                                                          3/3\r\n" +
 		"\r\n" +
-		"  ▌ hyperviseur     Cockpit + Komodo — racine d'admin                 9090  9120\r\n" +
-		"    gateway         Duplicati du gateway                                    8200\r\n" +
-		"    control-plane   Duplicati du control-plane (Mongo Komodo)               8201\r\n" +
+		"  ▌ hypervisor      Cockpit and Komodo, the admin root                9090  9120\r\n" +
+		"    gateway         Duplicati on the gateway                                8200\r\n" +
+		"    control-plane   Duplicati on the control plane, Komodo's Mongo          8201\r\n" +
 		"\r\n" +
-		"    ↑↓ naviguer    ⏎ ouvrir    ⎋ annuler\r\n"
+		"    ↑↓ move    ⏎ open    ⎋ cancel\r\n"
 	if got != want {
-		t.Fatalf("rendu inattendu.\n--- obtenu ---\n%s\n--- attendu ---\n%s", got, want)
+		t.Fatalf("unexpected frame.\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 }
 
@@ -63,7 +63,7 @@ func TestNoLineEverExceedsTheWidth(t *testing.T) {
 		Name: "une-destination-au-nom-vraiment-tres-long",
 		Desc: strings.Repeat("description interminable ", 8),
 		Forward: []config.Forward{
-			{Local: 65535, To: "127.0.0.1:1", Label: "Un label lui aussi très long"},
+			{Local: 65535, To: "127.0.0.1:1", Label: "A label that is also rather long"},
 		},
 	})
 	for width := 20; width <= 200; width++ {
@@ -71,7 +71,7 @@ func TestNoLineEverExceedsTheWidth(t *testing.T) {
 			p := Picker{All: long, Filter: filter}
 			for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
 				if n := ui.Runes(l); n > width {
-					t.Fatalf("largeur %d, filtre %q : ligne de %d colonnes : %q", width, filter, n, l)
+					t.Fatalf("width %d, filter %q: a line %d columns wide: %q", width, filter, n, l)
 				}
 			}
 		}
@@ -83,14 +83,14 @@ func TestNoLineEverExceedsTheWidth(t *testing.T) {
 func TestColourDoesNotChangeTheLayout(t *testing.T) {
 	p := Picker{All: real(), Filter: "dupl", Cursor: 1}
 	if got, want := plain(p.Frame(80, 24, true)), plain(p.Frame(80, 24, false)); got != want {
-		t.Fatalf("la couleur déplace des colonnes.\n--- avec ---\n%s\n--- sans ---\n%s", got, want)
+		t.Fatalf("colour moves columns.\n--- with ---\n%s\n--- without ---\n%s", got, want)
 	}
 }
 
 func TestNoColourMeansNoEscapeCodes(t *testing.T) {
 	frame := Picker{All: real(), Filter: "dupl"}.Frame(80, 24, false)
 	if ansi.MatchString(frame) {
-		t.Fatalf("une séquence ANSI a survécu à color=false : %q", frame)
+		t.Fatalf("an ANSI sequence survived color=false: %q", frame)
 	}
 }
 
@@ -104,10 +104,10 @@ func TestLinesCountsTheFrame(t *testing.T) {
 	} {
 		frame := p.Frame(80, 24, false)
 		if got, want := Lines(frame), strings.Count(frame, "\r\n"); got != want {
-			t.Fatalf("Lines=%d, lignes réelles=%d", got, want)
+			t.Fatalf("Lines=%d, real lines=%d", got, want)
 		}
 		if !strings.HasSuffix(frame, "\r\n") {
-			t.Fatal("une frame doit finir par une fin de ligne, sinon la dernière n'est pas effacée")
+			t.Fatal("a frame has to end on a line ending, or the last one never gets erased")
 		}
 	}
 }
@@ -117,21 +117,21 @@ func TestLinesCountsTheFrame(t *testing.T) {
 // last thing squeezed.
 func TestColumnsGiveWayInOrder(t *testing.T) {
 	cases := []struct {
-		largeur       int
-		attenduDedans string
-		attenduDehors string
+		width   int
+		wantIn  string
+		wantOut string
 	}{
 		{120, "Cockpit 9090", ""},
 		{70, "9090  9120", "Cockpit 9090"},
 		{40, "", "9090"},
 	}
 	for _, c := range cases {
-		frame := plain(Picker{All: real()}.Frame(c.largeur, 24, false))
-		if c.attenduDedans != "" && !strings.Contains(frame, c.attenduDedans) {
-			t.Errorf("largeur %d : %q attendu dans le rendu :\n%s", c.largeur, c.attenduDedans, frame)
+		frame := plain(Picker{All: real()}.Frame(c.width, 24, false))
+		if c.wantIn != "" && !strings.Contains(frame, c.wantIn) {
+			t.Errorf("width %d: want %q in the frame:\n%s", c.width, c.wantIn, frame)
 		}
-		if c.attenduDehors != "" && strings.Contains(frame, c.attenduDehors) {
-			t.Errorf("largeur %d : %q ne devait plus être là :\n%s", c.largeur, c.attenduDehors, frame)
+		if c.wantOut != "" && strings.Contains(frame, c.wantOut) {
+			t.Errorf("width %d: %q should be gone:\n%s", c.width, c.wantOut, frame)
 		}
 	}
 }
@@ -141,7 +141,7 @@ func TestColumnsGiveWayInOrder(t *testing.T) {
 func TestTruncationIsVisible(t *testing.T) {
 	frame := plain(Picker{All: real()}.Frame(50, 24, false))
 	if !strings.Contains(frame, "…") {
-		t.Fatalf("à 50 colonnes une description doit être coupée et le montrer :\n%s", frame)
+		t.Fatalf("at 50 columns a description has to be cut, and say so:\n%s", frame)
 	}
 }
 
@@ -149,15 +149,15 @@ func TestTruncationIsVisible(t *testing.T) {
 // column and two bytes, so padding by len() drifts a column per accent.
 func TestAccentsDoNotShiftColumns(t *testing.T) {
 	dests := []config.Destination{
-		{Name: "aaaaaaaaaa", Desc: "sans accent", Forward: []config.Forward{{Local: 1, To: "h:1"}}},
-		{Name: "ééééééééée", Desc: "avec accents", Forward: []config.Forward{{Local: 2, To: "h:2"}}},
+		{Name: "aaaaaaaaaa", Desc: "no accent", Forward: []config.Forward{{Local: 1, To: "h:1"}}},
+		{Name: "ééééééééée", Desc: "with accents", Forward: []config.Forward{{Local: 2, To: "h:2"}}},
 	}
 	got := rows(Picker{All: dests}.Frame(60, 24, false))
 	if len(got) != 2 {
-		t.Fatalf("attendu 2 lignes, obtenu %d : %q", len(got), got)
+		t.Fatalf("want 2 rows, got %d: %q", len(got), got)
 	}
-	if a, b := strings.Index(got[0], "sans"), strings.Index(got[1], "avec"); ui.Runes(got[0][:a]) != ui.Runes(got[1][:b]) {
-		t.Fatalf("les descriptions ne commencent pas à la même colonne :\n%q\n%q", got[0], got[1])
+	if a, b := strings.Index(got[0], "no accent"), strings.Index(got[1], "with accents"); ui.Runes(got[0][:a]) != ui.Runes(got[1][:b]) {
+		t.Fatalf("the descriptions do not start at the same column:\n%q\n%q", got[0], got[1])
 	}
 }
 
@@ -167,7 +167,7 @@ func TestHighlightKeepsTheVisibleWidth(t *testing.T) {
 		for _, f := range []string{"dupl", "GATEWAY", "z"} {
 			got := plain(highlight(s, f, ui.Theme(true)))
 			if got != s {
-				t.Fatalf("highlight(%q, %q) altère le texte : %q", s, f, got)
+				t.Fatalf("highlight(%q, %q) alters the text: %q", s, f, got)
 			}
 		}
 	}
@@ -183,11 +183,11 @@ func TestWindowKeepsTheCursorVisible(t *testing.T) {
 	for _, c := range cases {
 		first, shown := window(c.cursor, c.total, c.rows)
 		if first != c.first || shown != c.shown {
-			t.Errorf("window(%d,%d,%d) = (%d,%d), attendu (%d,%d)",
+			t.Errorf("window(%d,%d,%d) = (%d,%d), want (%d,%d)",
 				c.cursor, c.total, c.rows, first, shown, c.first, c.shown)
 		}
 		if c.cursor < first || c.cursor >= first+shown {
-			t.Errorf("window(%d,%d,%d) laisse le curseur hors de la fenêtre", c.cursor, c.total, c.rows)
+			t.Errorf("window(%d,%d,%d) leaves the cursor outside the window", c.cursor, c.total, c.rows)
 		}
 	}
 }
@@ -203,11 +203,11 @@ func TestAShortTerminalSaysWhatIsHidden(t *testing.T) {
 		})
 	}
 	frame := plain(Picker{All: many}.Frame(80, 12, false))
-	if !strings.Contains(frame, "de plus") {
-		t.Fatalf("les lignes cachées doivent être annoncées :\n%s", frame)
+	if !strings.Contains(frame, "more") {
+		t.Fatalf("hidden rows have to be announced:\n%s", frame)
 	}
 	if n := strings.Count(frame, "\r\n"); n > 12 {
-		t.Fatalf("la frame déborde de l'écran : %d lignes pour 12 de haut", n)
+		t.Fatalf("the frame overflows the screen: %d lines for a height of 12", n)
 	}
 }
 
@@ -218,15 +218,15 @@ func TestBusyPortsAreAnnouncedInTheList(t *testing.T) {
 	p := Picker{All: real(), Busy: map[string][]int{"control-plane": {8201}}}
 	frame := plain(p.Frame(80, 24, false))
 
-	if !strings.Contains(frame, "● 8201 pris") {
-		t.Fatalf("le port pris doit être annoncé :\n%s", frame)
+	if !strings.Contains(frame, "● 8201 in use") {
+		t.Fatalf("a taken port has to be announced:\n%s", frame)
 	}
 	// Only the destination concerned: the others still advertise their ports.
 	if !strings.Contains(frame, "8200") {
-		t.Errorf("les destinations libres gardent leurs ports :\n%s", frame)
+		t.Errorf("free destinations keep their ports:\n%s", frame)
 	}
-	if strings.Count(frame, "pris") != 1 {
-		t.Errorf("une seule ligne devait être marquée :\n%s", frame)
+	if strings.Count(frame, "in use") != 1 {
+		t.Errorf("only one row should be marked:\n%s", frame)
 	}
 }
 
@@ -238,7 +238,7 @@ func TestABusyColumnStillFits(t *testing.T) {
 		p := Picker{All: real(), Busy: busy}
 		for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
 			if n := ui.Runes(l); n > width {
-				t.Fatalf("largeur %d : ligne de %d colonnes : %q", width, n, l)
+				t.Fatalf("width %d: a line %d columns wide: %q", width, n, l)
 			}
 		}
 	}

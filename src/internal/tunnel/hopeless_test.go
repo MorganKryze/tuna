@@ -4,29 +4,29 @@ import "testing"
 
 func TestHopelessRecognisesTheThreeDeadEnds(t *testing.T) {
 	cases := []struct {
-		nom, stderr string
-		attendu     bool
+		name, stderr string
+		want         bool
 	}{
-		{"port occupé", "bind [127.0.0.1]:8200: Address already in use", true},
-		{"clé refusée", "debian@10.0.0.5: Permission denied (publickey)", true},
-		{"nom inconnu", "ssh: Could not resolve hostname nope", true},
+		{"port taken", "bind [127.0.0.1]:8200: Address already in use", true},
+		{"key refused", "debian@10.0.0.5: Permission denied (publickey)", true},
+		{"unknown name", "ssh: Could not resolve hostname nope", true},
 		// Everything below is a network problem, and a network problem is
 		// exactly what the retry loop exists for. Classify one of these as
 		// hopeless and tuna stops surviving a wifi change.
-		{"hôte éteint", "ssh: connect to host mon-hote port 22: Connection refused", false},
-		{"réseau coupé", "ssh: connect to host mon-hote port 22: Network is unreachable", false},
-		{"délai dépassé", "ssh: connect to host mon-hote port 22: Operation timed out", false},
-		{"retour de veille", "client_loop: send disconnect: Broken pipe", false},
-		{"rien du tout", "", false},
+		{"host down", "ssh: connect to host mon-hote port 22: Connection refused", false},
+		{"network gone", "ssh: connect to host mon-hote port 22: Network is unreachable", false},
+		{"timed out", "ssh: connect to host mon-hote port 22: Operation timed out", false},
+		{"back from sleep", "client_loop: send disconnect: Broken pipe", false},
+		{"nothing at all", "", false},
 	}
 	for _, c := range cases {
-		t.Run(c.nom, func(t *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			line, ok := Hopeless(c.stderr)
-			if ok != c.attendu {
-				t.Fatalf("attendu hopeless=%v pour %q, obtenu %v", c.attendu, c.stderr, ok)
+			if ok != c.want {
+				t.Fatalf("want hopeless=%v for %q, got %v", c.want, c.stderr, ok)
 			}
 			if ok && line == "" {
-				t.Fatal("un échec sans espoir doit rendre la ligne de ssh, pas une chaîne vide")
+				t.Fatal("a hopeless failure has to return ssh's line, not an empty string")
 			}
 		})
 	}
@@ -43,9 +43,9 @@ func TestHopelessReturnsTheOffendingLineOnly(t *testing.T) {
 
 	line, ok := Hopeless(stderr)
 	if !ok {
-		t.Fatal("le marqueur est présent, il doit être reconnu")
+		t.Fatal("the marker is there, it has to be recognised")
 	}
 	if line != "bind [127.0.0.1]:8200: Address already in use" {
-		t.Fatalf("ligne fautive attendue seule, obtenu %q", line)
+		t.Fatalf("want the offending line alone, got %q", line)
 	}
 }

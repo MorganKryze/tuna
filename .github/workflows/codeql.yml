@@ -1,27 +1,24 @@
-# CodeQL, lancé depuis le dépôt plutôt que depuis la configuration par défaut
-# de GitHub.
+# CodeQL, run from the repository rather than from GitHub's default setup.
 #
-# La configuration par défaut n'analyse pas une pull request venue d'un fork.
-# Rien n'échoue quand ça arrive : aucune analyse n'est mise en file, donc les
-# vérifications Analyze que la règle exige ne remontent jamais, et la pull
-# request reste bloquée avec tout le reste au vert et aucun moyen d'obtenir
-# ce qui manque.
+# Default setup does not analyse a pull request raised from a fork. Nothing
+# fails when that happens: no analysis is queued at all, so the Analyze checks
+# the ruleset requires never report, and the pull request sits blocked with
+# every other check green and no way to get the missing ones.
 #
-# Un workflow dans le dépôt, lui, tourne pour un fork, avec un jeton en lecture
-# seule et sans secret — c'est tout ce dont l'analyse a besoin.
+# A workflow in the repository does run for a fork, with a read-only token and
+# no secrets, which is all the analysis needs.
 name: codeql
 
 on:
   push:
     branches: [main]
-  # Pas de filtre `paths`, délibérément : ce sont des vérifications requises,
-  # et une vérification requise qui ne tourne jamais laisse une pull request
-  # de documentation en attente pour toujours. security.yml porte la même note
-  # pour la même raison.
+  # No `paths` filter, deliberately: these are required checks, and a required
+  # check that never runs leaves a docs-only pull request waiting forever.
+  # security.yml carries the same note for the same reason.
   pull_request:
     branches: [main]
-  # Une exécution hebdomadaire est ce qui rattrape une requête qui apprend
-  # quelque chose sur du code que personne n'a touché depuis.
+  # A weekly run is what catches a query that learns about code nobody has
+  # touched since.
   schedule:
     - cron: "41 6 * * 1"
   workflow_dispatch:
@@ -31,15 +28,14 @@ permissions:
 
 jobs:
   analyze:
-    # Nommé explicitement plutôt que laissé à GitHub, qui baptise un job de
-    # matrice d'après chacune de ses clés : le mode de build s'inviterait dans
-    # le nom et les vérifications sortiraient en « Analyze (go, autobuild) ».
+    # Spelled out rather than left to GitHub, which names a matrix job after
+    # every key in the entry: the build mode would ride along and the checks
+    # would come out as "Analyze (go, autobuild)".
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # init lit l'exécution à laquelle il appartient ; analyze publie ses
-      # résultats.
+      # init reads the run it belongs to; analyze uploads the results.
       actions: read
       security-events: write
     strategy:

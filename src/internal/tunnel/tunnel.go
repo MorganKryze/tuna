@@ -84,15 +84,15 @@ func Connect(d *config.Destination, run Runner, r Retry) error {
 			attempts = 0
 		}
 		if line, ok := Hopeless(res.Stderr); ok {
-			return fmt.Errorf("%s : %s", d.Name, line)
+			return fmt.Errorf("%s: %s", d.Name, line)
 		}
 
 		attempts++
 		if attempts > r.Max {
 			if r.Max == 0 {
-				return fmt.Errorf("%s : connexion échouée", d.Name)
+				return fmt.Errorf("%s: connection failed", d.Name)
 			}
-			return fmt.Errorf("%s : abandon après %d tentatives de reconnexion", d.Name, r.Max)
+			return fmt.Errorf("%s: gave up after %d reconnection attempts", d.Name, r.Max)
 		}
 		wait := backoff(attempts)
 		if r.Notify != nil {

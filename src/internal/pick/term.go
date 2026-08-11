@@ -12,7 +12,7 @@ import (
 )
 
 // ErrNoChoice is what Escape produces: not a failure, just nothing to do.
-var ErrNoChoice = errors.New("aucune destination choisie")
+var ErrNoChoice = errors.New("no destination chosen")
 
 // Pick draws the list and returns the chosen name, or ErrNoChoice.
 //
@@ -25,7 +25,7 @@ var ErrNoChoice = errors.New("aucune destination choisie")
 func Pick(dests []config.Destination, busy map[string][]int) (string, error) {
 	tty := os.Stdin
 	if !term.IsTerminal(int(tty.Fd())) {
-		return "", errors.New("pas de terminal : donne le nom de la destination en argument")
+		return "", errors.New("not a terminal: pass the destination name as an argument")
 	}
 	state, err := term.MakeRaw(int(tty.Fd()))
 	if err != nil {

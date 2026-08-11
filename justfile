@@ -1,4 +1,4 @@
-# Recettes de dev. `just` sans argument les liste.
+# Dev recipes. `just` with no argument lists them.
 
 default:
     @just --list
@@ -16,11 +16,11 @@ coverage:
 lint:
     golangci-lint run
 
-# Régénère la capture du README depuis la sortie réelle du binaire.
-# À relancer dès que le dessin du picker change.
+# Redraws the README's pictures from the binary's real output.
+# Re-run it whenever the picker's drawing changes.
 shot: build
     python3 scripts/shot.py "$PWD/tuna" 78
 
-# À lancer une fois après le clone : sans ça, le hook n'existe pas.
+# Run once after cloning: without it the hook does not exist.
 hooks:
     git config core.hooksPath githooks

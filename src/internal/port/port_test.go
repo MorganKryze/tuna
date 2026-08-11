@@ -38,10 +38,10 @@ func free(t *testing.T) int {
 
 func TestBusySeesARealListener(t *testing.T) {
 	if n := held(t); !Busy(n) {
-		t.Errorf("port %d est écouté, Busy doit dire vrai", n)
+		t.Errorf("port %d is being listened on, Busy has to say true", n)
 	}
 	if n := free(t); Busy(n) {
-		t.Errorf("port %d est libre, Busy doit dire faux", n)
+		t.Errorf("port %d is free, Busy has to say false", n)
 	}
 }
 
@@ -51,28 +51,28 @@ func TestProbingDoesNotHoldThePort(t *testing.T) {
 	n := free(t)
 	for i := range 3 {
 		if Busy(n) {
-			t.Fatalf("sonde n°%d : le port %d est devenu occupé, probablement par la sonde", i+1, n)
+			t.Fatalf("probe %d: port %d turned busy, most likely from the probe itself", i+1, n)
 		}
 	}
 }
 
 func TestBusyInReportsOnlyWhatIsTaken(t *testing.T) {
-	taken, libre := held(t), free(t)
+	busy, idle := held(t), free(t)
 	dests := []config.Destination{
-		{Name: "occupée", Forward: []config.Forward{
-			{Local: taken, To: "127.0.0.1:1"},
-			{Local: libre, To: "127.0.0.1:2"},
+		{Name: "taken", Forward: []config.Forward{
+			{Local: busy, To: "127.0.0.1:1"},
+			{Local: idle, To: "127.0.0.1:2"},
 		}},
-		{Name: "libre", Forward: []config.Forward{{Local: libre, To: "127.0.0.1:3"}}},
+		{Name: "free", Forward: []config.Forward{{Local: idle, To: "127.0.0.1:3"}}},
 	}
 
 	got := BusyIn(dests)
 	// A destination with nothing in the way is absent, not present-and-empty:
 	// the callers read a missing key as "go ahead".
-	if _, ok := got["libre"]; ok {
-		t.Errorf("une destination sans conflit ne doit pas apparaître : %v", got)
+	if _, ok := got["free"]; ok {
+		t.Errorf("a destination with nothing in the way must not show up: %v", got)
 	}
-	if want := []int{taken}; len(got["occupée"]) != 1 || got["occupée"][0] != want[0] {
-		t.Errorf("attendu %v pour « occupée », obtenu %v", want, got["occupée"])
+	if want := []int{busy}; len(got["taken"]) != 1 || got["taken"][0] != want[0] {
+		t.Errorf("want %v for the taken destination, got %v", want, got["taken"])
 	}
 }

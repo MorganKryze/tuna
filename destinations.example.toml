@@ -1,13 +1,14 @@
-# Copier vers ~/.config/tuna/destinations.toml et adapter.
-# Une destination = un tunnel SSH, autant de `forward` que d'UIs à joindre.
+# Copy to ~/.config/tuna/destinations.toml and edit.
+# One destination is one SSH tunnel, with as many `forward` entries as there
+# are UIs behind it.
 
 [[destination]]
-name = "hyperviseur"
-desc = "Cockpit + orchestrateur"
-# Un alias de ~/.ssh/config suffit : il porte déjà le port, l'utilisateur
-# et la clé. Les champs port et jump ci-dessous ne servent qu'aux cas que
-# l'alias ne couvre pas.
-host = "mon-hote"
+name = "hypervisor"
+desc = "Cockpit and the orchestrator"
+# An alias from ~/.ssh/config is usually enough: it already carries the port,
+# the user and the key. The port and jump fields below are only for what the
+# alias does not cover.
+host = "my-host"
 forward = [
   { local = 9090, to = "127.0.0.1:9090", label = "Cockpit" },
   { local = 9120, to = "10.0.0.5:9120", label = "Komodo" },
@@ -15,8 +16,8 @@ forward = [
 
 [[destination]]
 name = "vm-backup"
-desc = "Duplicati d'une VM, joignable seulement depuis l'hôte"
+desc = "Duplicati on a VM, reachable only from its host"
 host = "debian@10.0.0.5"
-port = 22022 # si l'alias ssh ne le porte pas déjà
-jump = "mon-hote" # devient -J : on passe par l'hôte pour atteindre la VM
+port = 22022 # when the ssh alias does not already carry it
+jump = "my-host" # becomes -J: reach the VM through its host
 forward = [{ local = 8201, to = "127.0.0.1:8200", label = "Duplicati" }]

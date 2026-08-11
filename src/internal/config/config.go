@@ -53,7 +53,7 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	md, err := toml.DecodeFile(path, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("lecture de %s : %w", path, err)
+		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
 	// A decoder ignores keys it does not know, which turns `forwards` into a
 	// destination with no tunnel and no complaint. Undecoded() is what makes
@@ -63,10 +63,10 @@ func Load(path string) (*Config, error) {
 		for _, k := range undecoded {
 			keys = append(keys, k.String())
 		}
-		return nil, fmt.Errorf("clé inconnue dans %s : %s", path, strings.Join(keys, ", "))
+		return nil, fmt.Errorf("unknown key in %s: %s", path, strings.Join(keys, ", "))
 	}
 	if err := cfg.validate(); err != nil {
-		return nil, fmt.Errorf("%s : %w", path, err)
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return &cfg, nil
 }

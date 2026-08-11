@@ -7,22 +7,22 @@ import (
 
 func TestRefusesInvalidDestinations(t *testing.T) {
 	cases := []struct {
-		nom, body, attenduDansErreur string
+		name, body, wantInError string
 	}{
 		{
-			"fichier vide",
+			"empty file",
 			``,
-			"aucune destination",
+			"no destination",
 		},
 		{
-			"sans nom",
+			"no name",
 			`[[destination]]
 host = "h"
 forward = [{ local = 1, to = "127.0.0.1:1" }]`,
 			"name",
 		},
 		{
-			"nom en double",
+			"duplicate name",
 			`[[destination]]
 name = "a"
 host = "h"
@@ -34,21 +34,21 @@ forward = [{ local = 2, to = "127.0.0.1:2" }]`,
 			"a",
 		},
 		{
-			"sans forward",
+			"no forward",
 			`[[destination]]
 name = "a"
 host = "h"`,
 			"forward",
 		},
 		{
-			"sans host",
+			"no host",
 			`[[destination]]
 name = "a"
 forward = [{ local = 1, to = "127.0.0.1:1" }]`,
 			"host",
 		},
 		{
-			"port ssh hors bornes",
+			"ssh port out of range",
 			`[[destination]]
 name = "a"
 host = "h"
@@ -57,7 +57,7 @@ forward = [{ local = 1, to = "127.0.0.1:1" }]`,
 			"70000",
 		},
 		{
-			"port local hors bornes",
+			"local port out of range",
 			`[[destination]]
 name = "a"
 host = "h"
@@ -65,7 +65,7 @@ forward = [{ local = 70000, to = "127.0.0.1:1" }]`,
 			"70000",
 		},
 		{
-			"port local à zéro",
+			"local port at zero",
 			`[[destination]]
 name = "a"
 host = "h"
@@ -73,7 +73,7 @@ forward = [{ to = "127.0.0.1:1" }]`,
 			"0",
 		},
 		{
-			"cible sans port",
+			"target with no port",
 			`[[destination]]
 name = "a"
 host = "h"
@@ -82,13 +82,13 @@ forward = [{ local = 1, to = "127.0.0.1" }]`,
 		},
 	}
 	for _, c := range cases {
-		t.Run(c.nom, func(t *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			_, err := Load(write(t, c.body))
 			if err == nil {
-				t.Fatal("configuration invalide acceptée")
+				t.Fatal("invalid config accepted")
 			}
-			if !strings.Contains(err.Error(), c.attenduDansErreur) {
-				t.Fatalf("l'erreur doit nommer %q, obtenu : %v", c.attenduDansErreur, err)
+			if !strings.Contains(err.Error(), c.wantInError) {
+				t.Fatalf("the error has to name %q, got: %v", c.wantInError, err)
 			}
 		})
 	}

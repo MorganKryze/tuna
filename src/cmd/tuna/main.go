@@ -44,17 +44,17 @@ func versionOr(fallback string) string {
 }
 
 func main() {
-	noRetry := flag.Bool("no-retry", false, "une seule tentative, pas de reconnexion")
-	preview := flag.Bool("preview", false, "afficher la liste sans l'ouvrir, et sortir")
+	noRetry := flag.Bool("no-retry", false, "one attempt, no reconnection")
+	preview := flag.Bool("preview", false, "print the list without opening anything, then exit")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `tuna %s — ouvre un tunnel SSH d'admin.
+		fmt.Fprintf(os.Stderr, `tuna %s — open an admin SSH tunnel.
 
-  tuna              choisir dans la liste
-  tuna <nom>        lancer directement
-  tuna --no-retry   ne pas relancer si ça coupe
-  tuna --preview    voir à quoi ressemble la liste, sans rien ouvrir
+  tuna              pick from the list
+  tuna <name>       go straight to it
+  tuna --no-retry   do not relaunch if it drops
+  tuna --preview    see what the list looks like, without opening anything
 
-Configuration : %s
+Config: %s
 `, version, config.Path())
 	}
 	flag.Parse()
@@ -93,7 +93,7 @@ func showPreview() error {
 	if arg := flag.Arg(0); arg != "" {
 		w, err := strconv.Atoi(arg)
 		if err != nil || w < 20 {
-			return fmt.Errorf("largeur %q : attendu un nombre d'au moins 20", arg)
+			return fmt.Errorf("width %q: expected a number of at least 20", arg)
 		}
 		width = w
 	}
@@ -120,7 +120,7 @@ func launch(name string, noRetry bool) error {
 
 	dest, ok := cfg.Find(name)
 	if !ok {
-		return fmt.Errorf("destination %q inconnue ; connues : %s", name, strings.Join(cfg.Names(), ", "))
+		return fmt.Errorf("unknown destination %q; known: %s", name, strings.Join(cfg.Names(), ", "))
 	}
 
 	// Checked before the banner and before ssh, because ssh finding out is
@@ -136,7 +136,7 @@ func launch(name string, noRetry bool) error {
 	// crash would lose it entirely. A failure here is worth a warning and
 	// nothing more — it costs a list in the wrong order, not a tunnel.
 	if err := recent.Save(statePath, recent.Bump(recent.Load(statePath), dest.Name)); err != nil {
-		fmt.Fprint(os.Stderr, failed(fmt.Errorf("ordre de récence non enregistré : %w", err), ui.ColorOK(os.Stderr)))
+		fmt.Fprint(os.Stderr, failed(fmt.Errorf("could not save the recency order: %w", err), ui.ColorOK(os.Stderr)))
 	}
 
 	// The banner goes to stdout: the URLs are the one thing worth piping

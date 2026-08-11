@@ -29,31 +29,31 @@ func killed(t *testing.T, sig syscall.Signal) error {
 // it.
 func TestSignaledTellsADeliberateCloseFromAFailure(t *testing.T) {
 	if got := signaled(killed(t, syscall.SIGINT)); !got {
-		t.Error("SIGINT doit être lu comme une fermeture volontaire")
+		t.Error("SIGINT has to read as a deliberate close")
 	}
 	if got := signaled(killed(t, syscall.SIGTERM)); !got {
-		t.Error("SIGTERM doit être lu comme une fermeture volontaire")
+		t.Error("SIGTERM has to read as a deliberate close")
 	}
 
 	// A process that chose to exit, however badly, is a failure worth
 	// retrying — which is every case where ssh itself gives up.
 	if got := signaled(exec.Command("false").Run()); got {
-		t.Error("un code de sortie non nul n'est pas une fermeture volontaire")
+		t.Error("a non-zero exit code is not a deliberate close")
 	}
 	// No error at all: ssh -N returned on its own.
 	if got := signaled(nil); got {
-		t.Error("nil n'est pas une fermeture volontaire")
+		t.Error("nil is not a deliberate close")
 	}
 	// Not an ExitError: the binary is missing, and nothing ever ran.
-	if got := signaled(exec.Command("tuna-qui-nexiste-pas").Run()); got {
-		t.Error("un binaire introuvable n'est pas une fermeture volontaire")
+	if got := signaled(exec.Command("tuna-that-does-not-exist").Run()); got {
+		t.Error("a missing binary is not a deliberate close")
 	}
 
 	// SIGKILL is deliberately not on the list: it is what a system sends
 	// when it takes a process away, not what an operator types, so the
 	// tunnel is worth bringing back.
 	if got := signaled(killed(t, syscall.SIGKILL)); got {
-		t.Error("SIGKILL doit rester réessayable")
+		t.Error("SIGKILL has to stay retryable")
 	}
 }
 
@@ -71,15 +71,15 @@ func TestTeeWriterShowsAndKeeps(t *testing.T) {
 		}
 		// A short count makes io.Copy retry the tail and duplicate it.
 		if n != len(s) {
-			t.Fatalf("écrit %d octets sur %d", n, len(s))
+			t.Fatalf("wrote %d bytes out of %d", n, len(s))
 		}
 	}
 
 	want := "bind [127.0.0.1]:8200: Address already in use\n"
 	if shown.String() != want {
-		t.Fatalf("affiché : attendu %q, obtenu %q", want, shown.String())
+		t.Fatalf("shown: want %q, got %q", want, shown.String())
 	}
 	if kept.String() != want {
-		t.Fatalf("conservé : attendu %q, obtenu %q", want, kept.String())
+		t.Fatalf("kept: want %q, got %q", want, kept.String())
 	}
 }

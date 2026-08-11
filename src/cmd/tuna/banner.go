@@ -55,19 +55,19 @@ func label(d *config.Destination, f config.Forward) string {
 func established(color bool) string {
 	t := ui.Theme(color)
 	return fmt.Sprintf("\n    %s %s\n", t.Wrap(ui.Ok, "✓"),
-		t.Wrap(ui.Dim, "tunnel ouvert · Ctrl-C pour fermer"))
+		t.Wrap(ui.Dim, "tunnel open · Ctrl-C to close"))
 }
 
 func restored(color bool) string {
 	t := ui.Theme(color)
-	return fmt.Sprintf("    %s %s\n", t.Wrap(ui.Ok, "✓"), t.Wrap(ui.Dim, "connexion rétablie"))
+	return fmt.Sprintf("    %s %s\n", t.Wrap(ui.Ok, "✓"), t.Wrap(ui.Dim, "connection restored"))
 }
 
 // closed is what settles the question the silence used to leave open: whether
 // tuna stopped or is about to try again.
 func closed(color bool) string {
 	t := ui.Theme(color)
-	return fmt.Sprintf("\n    %s %s\n\n", t.Wrap(ui.Ok, "✓"), t.Wrap(ui.Dim, "tunnel fermé"))
+	return fmt.Sprintf("\n    %s %s\n\n", t.Wrap(ui.Ok, "✓"), t.Wrap(ui.Dim, "tunnel closed"))
 }
 
 // failed is the last line, and the only one in red. ssh's own words are kept
@@ -89,7 +89,7 @@ func retrying(attempt, max int, wait time.Duration, color bool) string {
 	t := ui.Theme(color)
 	return fmt.Sprintf("\n    %s %s\n",
 		t.Wrap(ui.Warn, "⟳"),
-		t.Wrap(ui.Dim, fmt.Sprintf("connexion perdue — tentative %d/%d dans %s",
+		t.Wrap(ui.Dim, fmt.Sprintf("connection lost, retrying %d/%d in %s",
 			attempt, max, wait.Round(time.Second))))
 }
 
@@ -102,11 +102,11 @@ func busyError(name string, taken []int) error {
 	for i, n := range taken {
 		ports[i] = strconv.Itoa(n)
 	}
-	quoi, qui := "le port local %s est déjà pris", "dit qui l'occupe"
+	what, which := "local port %s is already taken", "shows what has it"
 	if len(taken) > 1 {
-		quoi, qui = "les ports locaux %s sont déjà pris", "dit qui les occupe"
+		what, which = "local ports %s are already taken", "shows what has them"
 	}
-	return fmt.Errorf("%s : "+fmt.Sprintf(quoi, strings.Join(ports, ", "))+
-		"\n      lsof -nP -iTCP:%s -sTCP:LISTEN   "+qui,
+	return fmt.Errorf("%s: "+fmt.Sprintf(what, strings.Join(ports, ", "))+
+		"\n      lsof -nP -iTCP:%s -sTCP:LISTEN   "+which,
 		name, strings.Join(ports, ","))
 }

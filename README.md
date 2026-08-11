@@ -2,8 +2,7 @@
 
 # tuna
 
-**Pick an admin tunnel from a list instead of remembering its name — and keep
-it alive when the wifi drops.**
+**Pick your admin SSH tunnel from a list instead of remembering its name.**
 
 [![Build](https://github.com/MorganKryze/tuna/actions/workflows/build.yml/badge.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
 [![Security](https://github.com/MorganKryze/tuna/actions/workflows/security.yml/badge.svg)](https://github.com/MorganKryze/tuna/actions/workflows/security.yml)
@@ -16,40 +15,19 @@ it alive when the wifi drops.**
 [![Dependencies](https://img.shields.io/badge/dependencies-3-247b7b)](CONTRIBUTING.md#ground-rules)
 [![Platforms](https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Linux-lightgrey)](https://github.com/MorganKryze/tuna/releases)
 
-<img src="docs/assets/picker.svg" alt="La liste des destinations : nom, description, et les ports locaux sur lesquels elles répondront." width="700">
+<img src="docs/assets/picker.svg" alt="The tuna picker: a filter line with a match count, then one row per destination showing its name, its description and the local ports it will answer on" width="700">
 
 </div>
 
-> A tunnel you have to remember the name of is a tunnel you end up not using.
+> A tuna swims a long way and finds the same water again. So does this.
 
-Type to filter — the matched text is underlined as you go — arrows to move,
-Enter to open. `tuna --preview` prints that list without opening anything,
-which is also how the layout is checked at a width you do not have:
-`tuna --preview 60`.
+You run three or four machines with no mesh agent on them, on purpose. The
+hypervisor, the control plane, the gateway. Their web UIs sit on a loopback
+address you reach with `ssh -N -L`, the command runs long enough that you wrote
+it into a `justfile`, and by now you have forgotten which recipe was which.
+Change network and the tunnel dies without a word.
 
-The tunnel then runs in the foreground and says what it is doing, because
-`ssh -N` says nothing at all — without these lines an open tunnel, a dropped
-one, a recovered one and a closed one look identical from the terminal:
-
-```text
-  ▌ hyperviseur   Cockpit + orchestrateur
-
-    Cockpit   http://localhost:9090
-    Komodo    http://localhost:9120
-
-    ✓ tunnel ouvert · Ctrl-C pour fermer
-
-    ⟳ connexion perdue — tentative 1/3 dans 1s
-    ✓ connexion rétablie
-
-    ✓ tunnel fermé
-```
-
-tuna exists because `just admin`, `just edge` and `just cp-backup` were three
-names to remember, displayed nowhere, behind a tunnel that died at the first
-network change and relaunched itself never. It replaces exactly that, and
-nothing more: a `ssh -N -L` to the private UI of a machine that has no mesh
-agent — a hypervisor, a control plane, a gateway.
+tuna is that `justfile`, with the names on screen and a tunnel that comes back.
 
 ## Install
 
@@ -57,8 +35,9 @@ agent — a hypervisor, a control plane, a gateway.
 go install github.com/MorganKryze/tuna/src/cmd/tuna@latest
 ```
 
-Or grab a binary from the [Releases](https://github.com/MorganKryze/tuna/releases)
-page — darwin and linux, amd64 and arm64, with a `SHA256SUMS` next to them.
+Or take a binary from the [Releases](https://github.com/MorganKryze/tuna/releases)
+page: darwin and linux, amd64 and arm64, with a `SHA256SUMS` and a build
+attestation next to them.
 
 ## Getting started
 
@@ -70,15 +49,48 @@ $EDITOR ~/.config/tuna/destinations.toml
 tuna
 ```
 
-There is no `tuna add`: the config is a file, and a file is edited in an
-editor. There is no `tuna list` either — the picker **is** the list.
+Type to filter. tuna underlines the matched text as you go, and the count on
+the right says how much is left:
+
+```text
+  ❯ dupl▏                                                                    2/3
+
+  ▌ control-plane   Duplicati on the control plane                          8201
+    gateway         Duplicati on the gateway                                8200
+```
+
+Arrows move, Enter opens, Escape gives up.
 
 ```sh
 tuna              # the picker, most recent destination on top
-tuna hyperviseur  # straight to it, no picker
+tuna gateway      # straight to it, no picker
 tuna --no-retry   # one attempt, no reconnection
 tuna --preview    # what the list looks like, without opening anything
 ```
+
+There is no `tuna add`, because the config is a file and a file belongs in an
+editor. There is no `tuna list` either: the picker is the list.
+
+## What a session looks like
+
+```text
+  ▌ hypervisor   Cockpit and Komodo, the admin root
+
+    Cockpit   http://localhost:9090
+    Komodo    http://localhost:9120
+
+    ✓ tunnel open · Ctrl-C to close
+
+    ⟳ connection lost, retrying 1/3 in 1s
+    ✓ connection restored
+
+    ✓ tunnel closed
+```
+
+`ssh -N` says nothing at all while it works, and nothing when it stops. Those
+four lines are how you tell an open tunnel from a hung one, and a recovered one
+from a closed one. The URLs go to stdout so you can pipe them somewhere;
+everything else tuna says goes to stderr.
 
 ## Configuration
 
@@ -88,9 +100,9 @@ UIs behind it.
 
 ```toml
 [[destination]]
-name = "hyperviseur"
-desc = "Cockpit + orchestrateur"
-host = "mon-hote"
+name = "hypervisor"
+desc = "Cockpit and the orchestrator"
+host = "my-host"
 forward = [
   { local = 9090, to = "127.0.0.1:9090", label = "Cockpit" },
   { local = 9120, to = "10.0.0.5:9120", label = "Komodo" },
@@ -98,110 +110,102 @@ forward = [
 
 [[destination]]
 name = "vm-backup"
-desc = "Duplicati d'une VM, joignable seulement depuis l'hôte"
+desc = "Duplicati on a VM, reachable only from its host"
 host = "debian@10.0.0.5"
 port = 22022
-jump = "mon-hote"
+jump = "my-host"
 forward = [{ local = 8201, to = "127.0.0.1:8200", label = "Duplicati" }]
 ```
 
-| Key             | Required | What it does                                                                                                       |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
-| `name`          | yes      | what you type after `tuna`, and what the picker shows. Unique.                                                     |
-| `desc`          | no       | the picker's second column, and part of what the filter searches.                                                  |
-| `host`          | yes      | ssh's target. An alias from `~/.ssh/config` is the point: it already carries the user, the port and the key.       |
-| `port`          | no       | becomes `-p`. Only for what the alias does not cover.                                                              |
-| `jump`          | no       | becomes `-J`. A VM reachable only from its host.                                                                   |
-| `forward`       | yes      | at least one. Each entry becomes one `-L`.                                                                         |
-| `forward.local` | yes      | the port on your machine, 1–65535.                                                                                 |
-| `forward.to`    | yes      | where it lands on the far side, written `host:port`.                                                               |
-| `forward.label` | no       | the name printed next to the URL. Without it you get a port number, which is a worse thing to read at 3am.         |
+| Key             | Required | What it does                                                                                                 |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `name`          | yes      | what you type after `tuna`, and what the picker shows. Unique.                                               |
+| `desc`          | no       | the picker's second column, and part of what the filter searches.                                            |
+| `host`          | yes      | ssh's target. An alias from `~/.ssh/config` is the point: it already carries the user, the port and the key. |
+| `port`          | no       | becomes `-p`, for what the alias does not cover.                                                             |
+| `jump`          | no       | becomes `-J`, for a VM reachable only from its host.                                                         |
+| `forward`       | yes      | at least one. Each entry becomes one `-L`.                                                                   |
+| `forward.local` | yes      | the port on your machine, 1 to 65535.                                                                        |
+| `forward.to`    | yes      | where it lands on the far side, written `host:port`.                                                         |
+| `forward.label` | no       | the name printed next to the URL. Skip it and you get a port number to read at 3am.                          |
 
-`host`, `port` and `jump` delegate to `~/.ssh/config` rather than duplicating
-it. tuna never reimplements ssh: it builds an argument list and runs the real
-binary, so aliases, `ProxyJump`, the agent, `known_hosts` and the host-key
-prompt all keep working the way you already configured them.
+`host`, `port` and `jump` hand the work to `~/.ssh/config` instead of copying
+it. tuna builds an argument list and runs the real ssh binary, so your aliases,
+`ProxyJump`, the agent, `known_hosts` and the host-key prompt keep working the
+way you set them up.
 
-The file is validated at startup — unique names, at least one forward, ports
-in range, a `host:port` on the far side — so a mistake fails with the offending
-line rather than in the middle of an `ssh`. A key tuna does not know is an
-error too: `forwards` instead of `forward` would otherwise be a destination
-with no tunnel and no complaint.
+tuna validates the file before it does anything: unique names, at least one
+forward, ports in range, a `host:port` on the far side. A key it does not know
+is an error too, since `forwards` instead of `forward` would otherwise leave
+you a destination with no tunnel and no complaint.
 
-Recency lives in `~/.local/state/tuna/recent` (honouring `XDG_STATE_HOME`),
-one name per line, most recent first. The order **is** the data — no
-timestamps, no JSON — so a file you can read with `cat` you can repair with
-`vim`. Names that no longer exist in the config are dropped on read, which is
-the entire cleanup mechanism.
+Recency lives in `~/.local/state/tuna/recent`, honouring `XDG_STATE_HOME`. One
+name per line, most recent first. The order is the data, so a file you can read
+with `cat` you can repair with `vim`. Names that left the config get dropped
+when tuna reads it, which is the whole cleanup mechanism.
 
 ## Reconnection
 
-Three attempts per outage, with 1s, 2s and 4s between them.
+Three attempts per outage, waiting 1s, 2s and 4s.
 
-A tunnel that held for 30 seconds resets the counter: the counter is per
-outage, not per session, so a tunnel left open all day survives five network
-changes while a destination that is genuinely down gives up in three quick
-tries. `ssh -N` says nothing when things go well, so the lifetime of the
-process is the least fragile success signal available.
+Hold a tunnel for thirty seconds and the counter resets. It counts per outage
+rather than per session, so a tunnel you leave open all day survives five
+network changes while a destination that is genuinely down gives up in three
+quick tries. `ssh -N` stays quiet when things go well, so how long the process
+lived is the least fragile success signal available.
 
-**Ctrl-C never relaunches.** It is caught in the binary rather than inferred
-from ssh's exit code, because a tunnel you cannot kill is the worst bug this
-program could have.
+**Ctrl-C never relaunches.** tuna catches the interrupt itself rather than
+reading ssh's exit code, because a tunnel you cannot kill is the worst thing
+this program could do to you.
 
-Two failures skip the retries entirely and report ssh's own words, because
-both would fail identically three times over: `Permission denied` and
-`Could not resolve hostname`. Everything else — host down, network gone, wifi
-switched, laptop woken from sleep — is worth another try.
+Two failures skip the retries and hand you ssh's own words, since both would
+fail the same way three times over: `Permission denied` and
+`Could not resolve hostname`. Host down, network gone, wifi switched, laptop
+woken from sleep: all worth another try.
 
-A third, a local port already taken, never reaches ssh at all. It is knowable
-before launching — binding the port is the same syscall `ssh -L` is about to
-make — so the picker marks the destination before you choose it, and choosing
-it anyway fails with the port and a way to find out what holds it, instead of
-three lines of ssh diagnostics arriving after a banner that promised a tunnel:
+A third one never reaches ssh. tuna binds the local port first, the same
+syscall `ssh -L` is about to make, so the picker marks a destination you cannot
+open before you choose it:
 
 ```text
-    control-plane   Duplicati du control-plane (Mongo Komodo)       ● 8201 pris
+    control-plane   Duplicati on the control plane                  ● 8201 in use
 ```
+
+Choose it anyway and you get the port and a way to find what holds it, instead
+of three lines of ssh diagnostics arriving after a banner that promised a
+tunnel:
 
 ```text
-tuna: control-plane : le port local 8201 est déjà pris
-      lsof -nP -iTCP:8201 -sTCP:LISTEN   dit qui l'occupe
+    ✗ control-plane: local port 8201 is already taken
+      lsof -nP -iTCP:8201 -sTCP:LISTEN   shows what has it
 ```
 
-`Address already in use` stays on the hopeless list as a backstop: a port can
-be taken in the moment between the check and the launch.
+`Address already in use` stays on the hopeless list as a backstop, since a port
+can be taken in the moment between the check and the launch.
 
-`-o ExitOnForwardFailure=yes` is always passed. Without it ssh stays connected
-with a dead forward and you find out from a browser tab, minutes later.
+tuna always passes `-o ExitOnForwardFailure=yes`. Without it, ssh stays
+connected with a dead forward and you find out from a browser tab minutes
+later.
 
-"Came up" is read from ssh surviving three seconds, which is a proxy and worth
-knowing as one: `-o ExitOnForwardFailure=yes` makes ssh exit within a moment
-when a forward cannot be bound, so surviving that long means the forwards were
-accepted. The case it gets wrong is a host that silently drops packets, where
-ssh sits in connect for a minute and tuna will have called it open. The exact
-answer would be to check that something is listening on the local port, and
-both ways of asking are worse: binding it races with ssh's own bind — losing
-that race causes the very failure it would be reporting on — and dialling it
-opens a real connection through the tunnel to the service on the far side.
+## Details you may care about
+
+Colour follows [NO_COLOR](https://no-color.org), never reaches a pipe, and
+`CLICOLOR_FORCE` overrides both. The layout gives way in a fixed order as your
+terminal narrows: port labels first, then the ports, then the descriptions, so
+no line ever wraps. Closing a tunnel leaves no `^C` on screen, because tuna
+clears the terminal flag that echoes it and puts it back on the way out.
+
+`tuna --preview` prints the list without opening anything, and takes a width so
+you can check the layout at a size you do not own: `tuna --preview 60`.
 
 ## What tuna does not do
 
-| Not here                | When to reconsider                                                                                                                                        |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A generic `tuna ip port`| Never, absent proof otherwise. It is `ssh -N -L 8200:10.0.0.5:8200 mon-hote` typed by hand; an ad-hoc form would cost an argument parser to save 20 characters. |
-| Opening the browser     | The day it genuinely grates. The URL is printed and terminals make it clickable, and it is ambiguous the moment a destination has two forwards.            |
-| Several tunnels at once, a daemon, `stop`, logs | When several terminal tabs become a nuisance. The real cost is not the launching: it is PIDs, a state file, orphans after a crash, and logs to store and read. |
-| Mesh URLs, interactive ssh | Neither needs help. Mesh URLs already open in a browser; `ssh hypervisor` types fine on its own.                                                        |
-
-Closing a tunnel leaves no `^C` behind: that character is echoed by the
-terminal driver rather than printed by tuna, and the flag responsible is
-cleared while a tunnel is running. Colour follows
-[NO_COLOR](https://no-color.org) and never reaches a pipe, and
-the layout gives way in a fixed order as the terminal narrows — port labels
-first, then the ports, then the descriptions — so nothing ever wraps.
-
-The interface speaks French, because that is who it was built for. The code and
-its comments are English.
+| Not here                                        | When to reconsider                                                                                                                                                     |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A generic `tuna ip port`                        | Never, absent proof otherwise. That is `ssh -N -L 8200:10.0.0.5:8200 my-host` typed by hand, and an ad-hoc form would cost an argument parser to save twenty characters. |
+| Opening the browser                             | The day it genuinely grates. tuna prints the URL and your terminal makes it clickable, and the choice turns ambiguous the moment a destination has two forwards.        |
+| Several tunnels at once, a daemon, `stop`, logs | When several terminal tabs become a nuisance. The cost sits after the launching: PIDs, a state file, orphans after a crash, and logs to store and to read.              |
+| Mesh URLs, interactive ssh                      | Neither needs help. Mesh URLs already open in a browser, and `ssh hypervisor` types fine on its own.                                                                    |
 
 ## License
 

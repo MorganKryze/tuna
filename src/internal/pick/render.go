@@ -53,11 +53,11 @@ func (p Picker) Frame(width, height int, color bool) string {
 
 	switch {
 	case len(matches) == 0:
-		quoted := "« " + p.Filter + " »"
-		if ui.Runes("    rien ne correspond à "+quoted) <= width {
-			line(&b, t.Wrap(ui.Dim, "    rien ne correspond à ")+t.Wrap(ui.Bold, quoted))
+		quoted := "\u201c" + p.Filter + "\u201d"
+		if ui.Runes("    nothing matches "+quoted) <= width {
+			line(&b, t.Wrap(ui.Dim, "    nothing matches ")+t.Wrap(ui.Bold, quoted))
 		} else {
-			line(&b, t.Wrap(ui.Dim, ui.Fit("    rien ne correspond", width)))
+			line(&b, t.Wrap(ui.Dim, ui.Fit("    nothing matches", width)))
 		}
 	default:
 		nameW, descW, portW, labels := p.columns(width)
@@ -66,7 +66,7 @@ func (p Picker) Frame(width, height int, color bool) string {
 			line(&b, p.row(t, matches[i], i == p.Cursor, nameW, descW, portW, labels))
 		}
 		if hidden := len(matches) - shown; hidden > 0 {
-			line(&b, t.Wrap(ui.Dim, ui.Fit(fmt.Sprintf("    ⋯ %d de plus", hidden), width)))
+			line(&b, t.Wrap(ui.Dim, ui.Fit(fmt.Sprintf("    ⋯ %d more", hidden), width)))
 		}
 	}
 
@@ -80,7 +80,7 @@ func (p Picker) Frame(width, height int, color bool) string {
 // wrapped legend would break the wind-back just as surely as a wrapped row.
 func hint(t ui.Theme, width int) string {
 	for _, s := range []string{
-		"    ↑↓ naviguer    ⏎ ouvrir    ⎋ annuler",
+		"    ↑↓ move    ⏎ open    ⎋ cancel",
 		"    ↑↓ · ⏎ · ⎋",
 	} {
 		if ui.Runes(s) <= width {
@@ -126,7 +126,7 @@ func (p Picker) prompt(t ui.Theme, width, matched int) string {
 	// search box anyone has used places its placeholder.
 	filter, ghost := p.Filter, ""
 	if filter == "" {
-		ghost = "tapez pour filtrer"
+		ghost = "type to filter"
 	}
 	// 2 for "❯ ", 1 for the block.
 	switch room := budget - 3; {
@@ -257,7 +257,7 @@ func (p Picker) ports(d config.Destination, labels bool) string {
 		for _, n := range taken {
 			out = append(out, fmt.Sprintf("%d", n))
 		}
-		return "● " + strings.Join(out, " ") + " pris"
+		return "● " + strings.Join(out, " ") + " in use"
 	}
 	out := make([]string, 0, len(d.Forward))
 	for _, f := range d.Forward {

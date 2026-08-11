@@ -16,8 +16,8 @@ With [just](https://just.systems) installed, `just` lists the shortcuts:
 (`.golangci.yml`); CI runs it on every push.
 
 **Run `just hooks` once after cloning.** It points git at `githooks/`, and
-without it the pre-commit hook does not exist — you find out from a red CI run
-five minutes after opening a pull request instead of from a thirty-second
+without it the pre-commit hook does not exist. You then find out from a red CI
+run five minutes after opening a pull request, instead of from a thirty-second
 round trip locally. The hook runs gofmt, `go vet` and the tests.
 
 ## Layout
@@ -43,8 +43,8 @@ The dependency graph runs one way: `config` and `ui` know nothing; `recent`,
 `pick`, `tunnel` and `port` know `config`; `main` wires them. Keep it that way. A test
 lives beside the package it exercises.
 
-Inside a package, one file per concern, and the seam is always the same one —
-what can be tested without the world, and what cannot:
+Inside a package, one file per concern, and the seam is always the same: what a
+test can reach without the world, and what it cannot.
 
 ```text
 pick/pick.go     Picker, Matches, Update: pure, state + keystroke → state
@@ -61,7 +61,7 @@ config/validate.go  what a valid destinations.toml is
 
 **Drawing is a pure function too.** `Frame(width, height, colour) string` takes
 its terminal as arguments instead of reading one, which is what lets the layout
-be asserted at every width from 20 to 200 columns — and looked at, with
+be asserted at every width from 20 to 200 columns, and looked at with
 `tuna --preview 60`. Two rules come with it, both enforced by tests: no line
 may ever exceed the width, because a wrapped line makes the frame taller than
 it is counted to be and the redraw then erases the wrong rows; and colour must
@@ -86,29 +86,29 @@ which is why the entire reconnection policy is tested in microseconds.
   sits and when each piece would be worth reconsidering.
 - **Dependencies: three, and a fourth needs an argument.** `BurntSushi/toml`
   because the standard library does not read TOML and TOML is the only
-  hand-editable format that keeps comments — which the example config lives on.
+  hand-editable format that keeps comments, which the example config lives on.
   `golang.org/x/term` for raw mode and the terminal size, and `golang.org/x/sys`
   for the one termios flag `x/term` does not expose; both official, and the
   second was already there as the first one's own dependency. A fourth needs the same case made in the pull request: what it
   buys, what it costs in `go.sum`, and why the standard library cannot. The
   picker is hand-written on `x/term` because `bubbletea` pulls thirty-five
-  modules — including a spring physics engine — to draw four lines.
+  modules, one of them a spring physics engine, to draw four lines.
 - **Deciding logic is a pure function, and it arrives with its test.** The
   reconnection loop, the picker's navigation and the recency order are all
   written as functions of their inputs, which is why the suite runs in under a
   second with no terminal, no clock and no network. `Connect` takes an
   injectable `Runner`; it does not know `os/exec`. Code that touches the
   terminal or a process stays thin and untested, by construction.
-- **Only tuna writes on tuna's screen.** The `^C` a terminal used to print
-  when you closed a tunnel came from the terminal driver, not from here, and
-  it is cleared for the life of the tunnel (`ECHOCTL`, in `ui/echo.go`). One
+- **Only tuna writes on tuna's screen.** The `^C` a terminal used to print when
+  you closed a tunnel came from the terminal driver rather than from here, and
+  tuna clears it for the life of the tunnel (`ECHOCTL`, in `ui/echo.go`). One
   flag, never raw mode: ssh still holds that terminal and its host-key prompt
-  needs ordinary echo. No test covers the flag itself — checking it means a
-  pty and a real keystroke — so it is checked by hand, against a build with
-  the line removed, which is the only way to know the check would have failed.
+  needs ordinary echo. No test covers the flag, since checking it takes a pty
+  and a real keystroke. Check it by hand against a build with the line removed,
+  which is the only way to know the check would have failed.
 - **The pictures are generated, not taken.** `just shot` runs the binary,
   parses its escape codes and draws the SVGs, against
-  `destinations.example.toml` in a throwaway XDG root — a screenshot of a real
+  `destinations.example.toml` in a throwaway XDG root. A screenshot of a real
   machine would publish internal addresses, and one taken by hand goes stale
   the first time the drawing moves. Re-run it in the same pull request that
   changes the picker. `docs/assets/social-card.png` is the one file that then
@@ -125,9 +125,8 @@ which is why the entire reconnection policy is tested in microseconds.
   never inferred from an exit code. A tunnel that relaunches itself when you
   try to close it is the worst bug this program can have, and the test suite
   guards it.
-- **French to the user, English in the code.** The binary talks to a
-  francophone; the code is read by everyone. No error message ever contains an
-  absolute path from a development machine.
+- **English everywhere.** The binary, the comments, the tests, the workflow
+  notes. No error message carries an absolute path from a development machine.
 
 ## Commits
 

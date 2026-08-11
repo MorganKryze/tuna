@@ -19,13 +19,13 @@ func TestCursorStopsAtBothEnds(t *testing.T) {
 	// Up at the top stays at the top rather than wrapping: wrapping in a
 	// three-line list reads as a glitch, not as a feature.
 	if next, _, _ := p.Update(KeyUp, 0); next.Cursor != 0 {
-		t.Fatalf("haut en tête doit rester à 0, obtenu %d", next.Cursor)
+		t.Fatalf("up at the top has to stay at 0, got %d", next.Cursor)
 	}
 	for range 5 {
 		p, _, _ = p.Update(KeyDown, 0)
 	}
 	if p.Cursor != 2 {
-		t.Fatalf("bas en fin de liste doit rester à 2, obtenu %d", p.Cursor)
+		t.Fatalf("down at the end has to stay at 2, got %d", p.Cursor)
 	}
 }
 
@@ -36,11 +36,11 @@ func TestFilterNarrowsAndKeepsTheCursorValid(t *testing.T) {
 		p, _, _ = p.Update(KeyRune, r)
 	}
 	if got := p.Matches(); len(got) != 1 || got[0].Name != "hyperviseur" {
-		t.Fatalf("le filtre doit garder la seule correspondance, obtenu %v", got)
+		t.Fatalf("the filter has to keep the one match, got %v", got)
 	}
 	// The cursor pointed at the third row, and there is only one row left.
 	if p.Cursor != 0 {
-		t.Fatalf("le curseur doit rester dans la liste filtrée, obtenu %d", p.Cursor)
+		t.Fatalf("the cursor has to stay inside the filtered list, got %d", p.Cursor)
 	}
 }
 
@@ -52,18 +52,18 @@ func TestAFilterMatchingNothingSelectsNothing(t *testing.T) {
 		p, _, _ = p.Update(KeyRune, r)
 	}
 	if len(p.Matches()) != 0 {
-		t.Fatal("le filtre ne devait rien laisser")
+		t.Fatal("the filter should have left nothing")
 	}
 	next, chosen, done := p.Update(KeyEnter, 0)
 	if done || chosen != "" {
-		t.Fatalf("Entrée sur une liste vide ne doit rien choisir, obtenu %q done=%v", chosen, done)
+		t.Fatalf("enter on an empty list must choose nothing, got %q done=%v", chosen, done)
 	}
 	if next.Cursor != 0 {
-		t.Fatalf("curseur invalide : %d", next.Cursor)
+		t.Fatalf("invalid cursor: %d", next.Cursor)
 	}
 	// Down on an empty list must not walk the cursor off the end either.
 	if next, _, _ = next.Update(KeyDown, 0); next.Cursor != 0 {
-		t.Fatalf("bas sur une liste vide doit rester à 0, obtenu %d", next.Cursor)
+		t.Fatalf("down on an empty list has to stay at 0, got %d", next.Cursor)
 	}
 }
 
@@ -76,11 +76,11 @@ func TestBackspaceWidensAgain(t *testing.T) {
 		p, _, _ = p.Update(KeyBackspace, 0)
 	}
 	if len(p.Matches()) != 3 {
-		t.Fatalf("filtre vidé doit tout remontrer, obtenu %d", len(p.Matches()))
+		t.Fatalf("an emptied filter has to show everything again, got %d", len(p.Matches()))
 	}
 	// Backspace on an empty filter is a no-op, not a panic.
 	if next, _, _ := p.Update(KeyBackspace, 0); next.Filter != "" {
-		t.Fatalf("filtre attendu vide, obtenu %q", next.Filter)
+		t.Fatalf("want an empty filter, got %q", next.Filter)
 	}
 }
 
@@ -89,12 +89,12 @@ func TestEnterAndEscape(t *testing.T) {
 	p, _, _ = p.Update(KeyDown, 0)
 	_, chosen, done := p.Update(KeyEnter, 0)
 	if !done || chosen != "gateway" {
-		t.Fatalf("Entrée doit choisir la ligne sous le curseur, obtenu %q done=%v", chosen, done)
+		t.Fatalf("enter has to choose the row under the cursor, got %q done=%v", chosen, done)
 	}
 
 	_, chosen, done = demo().Update(KeyEsc, 0)
 	if !done || chosen != "" {
-		t.Fatalf("Échap doit terminer sans choisir, obtenu %q done=%v", chosen, done)
+		t.Fatalf("escape has to finish without choosing, got %q done=%v", chosen, done)
 	}
 }
 
@@ -104,7 +104,7 @@ func TestFilterMatchesTheDescriptionToo(t *testing.T) {
 		p, _, _ = p.Update(KeyRune, r)
 	}
 	if got := p.Matches(); len(got) != 2 {
-		t.Fatalf("le filtre doit aussi lire desc, obtenu %d correspondances", len(got))
+		t.Fatalf("the filter has to read desc too, got %d matches", len(got))
 	}
 }
 
@@ -117,7 +117,7 @@ func TestEnterSelectsFromTheFilteredList(t *testing.T) {
 	}
 	p, _, _ = p.Update(KeyDown, 0)
 	if _, chosen, _ := p.Update(KeyEnter, 0); chosen != "vm-backup" {
-		t.Fatalf("attendu vm-backup, obtenu %q", chosen)
+		t.Fatalf("want vm-backup, got %q", chosen)
 	}
 }
 
@@ -128,6 +128,6 @@ func TestAnUnknownKeyChangesNothing(t *testing.T) {
 	p, _, _ = p.Update(KeyDown, 0)
 	next, chosen, done := p.Update(KeyNone, 0)
 	if done || chosen != "" || next.Cursor != 1 || next.Filter != "" {
-		t.Fatalf("KeyNone doit être neutre, obtenu %+v chosen=%q done=%v", next, chosen, done)
+		t.Fatalf("KeyNone has to be neutral, got %+v chosen=%q done=%v", next, chosen, done)
 	}
 }

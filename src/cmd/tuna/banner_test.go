@@ -32,7 +32,7 @@ func TestBannerLooksLikeThis(t *testing.T) {
 		"    Cockpit   http://localhost:9090\n" +
 		"    Komodo    http://localhost:9120\n"
 	if got := banner(hyperviseur(), false); got != want {
-		t.Fatalf("bannière inattendue.\n--- obtenu ---\n%s\n--- attendu ---\n%s", got, want)
+		t.Fatalf("unexpected banner.\n--- got ---\n%s\n--- want ---\n%s", got, want)
 	}
 }
 
@@ -46,7 +46,7 @@ func TestTheURLIsNeverStyled(t *testing.T) {
 			continue
 		}
 		if ansi.MatchString(line[i:]) {
-			t.Fatalf("une séquence ANSI touche l'URL : %q", line)
+			t.Fatalf("an ANSI sequence touches the URL: %q", line)
 		}
 	}
 }
@@ -60,11 +60,11 @@ func TestBannerFallsBackToTheDestinationName(t *testing.T) {
 	// No label: the name stands in, because a bare port number is the one
 	// thing the reader already has in the URL next to it.
 	if !strings.Contains(got, "    brut   http://localhost:8080") {
-		t.Errorf("sans label, le nom doit servir d'étiquette :\n%s", got)
+		t.Errorf("with no label, the name has to stand in:\n%s", got)
 	}
 	// No description: no dangling separator where it would have been.
 	if strings.Contains(got, "brut   \n") || strings.Contains(got, "▌ brut  ") {
-		t.Errorf("une description vide ne doit rien laisser traîner :\n%q", got)
+		t.Errorf("an empty description must leave nothing dangling:\n%q", got)
 	}
 }
 
@@ -74,8 +74,8 @@ func TestLabelsArePaddedToACommonWidth(t *testing.T) {
 	got := plain(banner(&config.Destination{
 		Name: "x",
 		Forward: []config.Forward{
-			{Local: 1, To: "h:1", Label: "court"},
-			{Local: 2, To: "h:2", Label: "une-étiquette-longue"},
+			{Local: 1, To: "h:1", Label: "short"},
+			{Local: 2, To: "h:2", Label: "a-rather-long-label"},
 		},
 	}, false))
 
@@ -88,28 +88,28 @@ func TestLabelsArePaddedToACommonWidth(t *testing.T) {
 		}
 	}
 	if len(cols) != 2 || cols[0] != cols[1] {
-		t.Fatalf("les URLs doivent commencer à la même colonne, obtenu %v :\n%s", cols, got)
+		t.Fatalf("the URLs have to start at the same column, got %v:\n%s", cols, got)
 	}
 }
 
 func TestRetryingSaysWhichAttemptAndHowLong(t *testing.T) {
 	got := plain(retrying(2, 3, 2*time.Second, false))
-	for _, attendu := range []string{"2/3", "2s", "connexion perdue"} {
-		if !strings.Contains(got, attendu) {
-			t.Errorf("%q attendu dans %q", attendu, got)
+	for _, want := range []string{"2/3", "2s", "connection lost"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("want %q in %q", want, got)
 		}
 	}
 	if !strings.HasSuffix(got, "\n") {
-		t.Error("la ligne doit se terminer, sinon ssh écrit à sa suite")
+		t.Error("the line has to end, or ssh writes right after it")
 	}
 }
 
 func TestNoColourMeansNoEscapeCodes(t *testing.T) {
 	if ansi.MatchString(banner(hyperviseur(), false)) {
-		t.Error("une séquence ANSI a survécu à color=false dans la bannière")
+		t.Error("an ANSI sequence survived color=false in the banner")
 	}
 	if ansi.MatchString(retrying(1, 3, time.Second, false)) {
-		t.Error("une séquence ANSI a survécu à color=false dans l'avis de reconnexion")
+		t.Error("an ANSI sequence survived color=false in the retry notice")
 	}
 }
 
@@ -118,23 +118,23 @@ func TestNoColourMeansNoEscapeCodes(t *testing.T) {
 // port and a way to find out what has it.
 func TestBusyErrorNamesThePortAndHowToFindIt(t *testing.T) {
 	one := busyError("control-plane", []int{8201}).Error()
-	for _, attendu := range []string{"control-plane", "8201", "lsof -nP -iTCP:8201 -sTCP:LISTEN"} {
-		if !strings.Contains(one, attendu) {
-			t.Errorf("%q attendu dans :\n%s", attendu, one)
+	for _, want := range []string{"control-plane", "8201", "lsof -nP -iTCP:8201 -sTCP:LISTEN"} {
+		if !strings.Contains(one, want) {
+			t.Errorf("want %q in:\n%s", want, one)
 		}
 	}
-	if !strings.Contains(one, "le port local") || !strings.Contains(one, "l'occupe") {
-		t.Errorf("un seul port doit se dire au singulier :\n%s", one)
+	if !strings.Contains(one, "local port") || !strings.Contains(one, "has it") {
+		t.Errorf("one port has to read as singular:\n%s", one)
 	}
 
 	many := busyError("hyperviseur", []int{9090, 9120}).Error()
-	if !strings.Contains(many, "les ports locaux") || !strings.Contains(many, "les occupe") {
-		t.Errorf("plusieurs ports doivent se dire au pluriel :\n%s", many)
+	if !strings.Contains(many, "local ports") || !strings.Contains(many, "has them") {
+		t.Errorf("several ports have to read as plural:\n%s", many)
 	}
 	// lsof takes its ports comma-separated with no space; a space there makes
 	// the command in the message one that does not run.
 	if !strings.Contains(many, "-iTCP:9090,9120 ") {
-		t.Errorf("la commande lsof doit être collable telle quelle :\n%s", many)
+		t.Errorf("the lsof command has to be pasteable as it stands:\n%s", many)
 	}
 }
 
@@ -143,25 +143,25 @@ func TestBusyErrorNamesThePortAndHowToFindIt(t *testing.T) {
 // closed one look identical from the terminal.
 func TestTheStatusLines(t *testing.T) {
 	cases := []struct {
-		nom, got, marqueur, texte string
+		name, got, marker, text string
 	}{
-		{"ouvert", established(false), "✓", "tunnel ouvert · Ctrl-C pour fermer"},
-		{"rétabli", restored(false), "✓", "connexion rétablie"},
-		{"fermé", closed(false), "✓", "tunnel fermé"},
-		{"perdu", retrying(1, 3, time.Second, false), "⟳", "tentative 1/3"},
+		{"open", established(false), "✓", "tunnel open · Ctrl-C to close"},
+		{"restored", restored(false), "✓", "connection restored"},
+		{"closed", closed(false), "✓", "tunnel closed"},
+		{"lost", retrying(1, 3, time.Second, false), "⟳", "retrying 1/3"},
 	}
 	for _, c := range cases {
-		t.Run(c.nom, func(t *testing.T) {
-			if !strings.Contains(c.got, c.marqueur) || !strings.Contains(c.got, c.texte) {
-				t.Fatalf("attendu %q et %q, obtenu %q", c.marqueur, c.texte, c.got)
+		t.Run(c.name, func(t *testing.T) {
+			if !strings.Contains(c.got, c.marker) || !strings.Contains(c.got, c.text) {
+				t.Fatalf("want %q and %q, got %q", c.marker, c.text, c.got)
 			}
 			// The same marker column as every other line, or they read as
 			// four unrelated notices instead of one conversation.
 			if !strings.HasPrefix(strings.TrimLeft(c.got, "\n"), "    ") {
-				t.Errorf("indentation attendue de 4 espaces : %q", c.got)
+				t.Errorf("want an indent of 4 spaces: %q", c.got)
 			}
 			if !strings.HasSuffix(c.got, "\n") {
-				t.Errorf("la ligne doit se terminer, sinon ssh écrit à sa suite : %q", c.got)
+				t.Errorf("the line has to end, or ssh writes right after it: %q", c.got)
 			}
 		})
 	}
@@ -171,7 +171,7 @@ func TestTheStatusLines(t *testing.T) {
 // that sentence moved onto the line printed once the tunnel is actually up.
 func TestTheBannerDoesNotPromiseAnOpenTunnel(t *testing.T) {
 	if strings.Contains(banner(hyperviseur(), false), "Ctrl-C") {
-		t.Error("la bannière est imprimée avant que le tunnel existe : elle ne doit pas parler de le fermer")
+		t.Error("the banner prints before the tunnel exists: it must not talk about closing it")
 	}
 }
 
@@ -179,13 +179,13 @@ func TestFailedKeepsSshsOwnWordsFirst(t *testing.T) {
 	got := plain(failed(busyError("control-plane", []int{8201}), false))
 	lines := strings.Split(strings.Trim(got, "\n"), "\n")
 	if len(lines) != 2 {
-		t.Fatalf("attendu 2 lignes, obtenu %d : %q", len(lines), got)
+		t.Fatalf("want 2 lines, got %d: %q", len(lines), got)
 	}
 	if !strings.HasPrefix(lines[0], "    ✗ ") {
-		t.Errorf("la première ligne porte le marqueur : %q", lines[0])
+		t.Errorf("the first line carries the marker: %q", lines[0])
 	}
 	if !strings.Contains(lines[1], "lsof") {
-		t.Errorf("le reste est indenté dessous : %q", lines[1])
+		t.Errorf("the rest is indented underneath: %q", lines[1])
 	}
 }
 
@@ -196,9 +196,9 @@ func TestVersionFallsBackToTheBuildInfo(t *testing.T) {
 	// Under `go test` the build info exists but carries no module version,
 	// which is the same shape as a local `go build`.
 	if got := versionOr("dev"); got != "dev" {
-		t.Fatalf("une build locale doit garder le repli, obtenu %q", got)
+		t.Fatalf("a local build has to keep the fallback, got %q", got)
 	}
 	if version == "" {
-		t.Error("la version affichée ne doit jamais être vide")
+		t.Error("the version shown must never be empty")
 	}
 }

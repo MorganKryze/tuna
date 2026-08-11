@@ -25,10 +25,10 @@ func TestFitAndFitRight(t *testing.T) {
 	}
 	for _, c := range cases {
 		if got := Fit(c.in, c.w); got != c.fit {
-			t.Errorf("Fit(%q,%d) = %q, attendu %q", c.in, c.w, got, c.fit)
+			t.Errorf("Fit(%q,%d) = %q, want %q", c.in, c.w, got, c.fit)
 		}
 		if got := FitRight(c.in, c.w); got != c.right {
-			t.Errorf("FitRight(%q,%d) = %q, attendu %q", c.in, c.w, got, c.right)
+			t.Errorf("FitRight(%q,%d) = %q, want %q", c.in, c.w, got, c.right)
 		}
 	}
 }
@@ -39,7 +39,7 @@ func TestFitAlwaysYieldsExactlyWColumns(t *testing.T) {
 	for _, s := range []string{"", "a", "abc", "éàü", strings.Repeat("long ", 20)} {
 		for w := 1; w <= 30; w++ {
 			if got := Runes(Fit(s, w)); got != w {
-				t.Fatalf("Fit(%q,%d) fait %d colonnes", s, w, got)
+				t.Fatalf("Fit(%q,%d) is %d columns wide", s, w, got)
 			}
 		}
 	}
@@ -47,15 +47,15 @@ func TestFitAlwaysYieldsExactlyWColumns(t *testing.T) {
 
 func TestWrapIsANoOpWithoutColour(t *testing.T) {
 	if got := Theme(false).Wrap(Bold, "x"); got != "x" {
-		t.Errorf("sans couleur, Wrap doit rendre le texte nu, obtenu %q", got)
+		t.Errorf("without colour, Wrap has to return bare text, got %q", got)
 	}
 	if got := Theme(true).Wrap(Bold, "x"); got != Bold+"x"+Reset {
-		t.Errorf("avec couleur, Wrap doit encadrer, obtenu %q", got)
+		t.Errorf("with colour, Wrap has to bracket the text, got %q", got)
 	}
 	// Styling nothing would emit codes that reset nothing, which is only a
 	// way to make an empty cell non-empty.
 	if got := Theme(true).Wrap(Bold, ""); got != "" {
-		t.Errorf("une chaîne vide doit rester vide, obtenu %q", got)
+		t.Errorf("an empty string has to stay empty, got %q", got)
 	}
 }
 
@@ -77,20 +77,20 @@ func TestColorOKSaysNo(t *testing.T) {
 	t.Setenv("TERM", "xterm")
 	unset(t, "NO_COLOR")
 	if ColorOK(w) {
-		t.Error("un tube n'est pas un terminal")
+		t.Error("a pipe is not a terminal")
 	}
 
 	for _, v := range []string{"", "0", "1", "false"} {
 		t.Setenv("NO_COLOR", v)
 		if ColorOK(w) {
-			t.Errorf("NO_COLOR=%q doit couper la couleur", v)
+			t.Errorf("NO_COLOR=%q has to switch colour off", v)
 		}
 	}
 
 	unset(t, "NO_COLOR")
 	t.Setenv("TERM", "dumb")
 	if ColorOK(w) {
-		t.Error("TERM=dumb doit couper la couleur")
+		t.Error("TERM=dumb has to switch colour off")
 	}
 
 	// CLICOLOR_FORCE overrides the pipe and the dumb terminal, and NO_COLOR
@@ -98,16 +98,16 @@ func TestColorOKSaysNo(t *testing.T) {
 	// the one asking for less wins.
 	t.Setenv("CLICOLOR_FORCE", "1")
 	if !ColorOK(w) {
-		t.Error("CLICOLOR_FORCE doit forcer la couleur dans un tube")
+		t.Error("CLICOLOR_FORCE has to force colour through a pipe")
 	}
 	t.Setenv("CLICOLOR_FORCE", "0")
 	if ColorOK(w) {
-		t.Error(`CLICOLOR_FORCE="0" ne force rien`)
+		t.Error(`CLICOLOR_FORCE="0" forces nothing`)
 	}
 	t.Setenv("CLICOLOR_FORCE", "1")
 	t.Setenv("NO_COLOR", "")
 	if ColorOK(w) {
-		t.Error("NO_COLOR doit primer sur CLICOLOR_FORCE")
+		t.Error("NO_COLOR has to win over CLICOLOR_FORCE")
 	}
 }
 
@@ -132,7 +132,7 @@ func TestHideControlEchoSurvivesTheAbsenceOfATerminal(t *testing.T) {
 
 	restore := HideControlEcho(r)
 	if restore == nil {
-		t.Fatal("un restore nil ferait paniquer un defer")
+		t.Fatal("a nil restore would panic a defer")
 	}
 	restore()
 	restore() // and twice, because a defer can outlive an early return

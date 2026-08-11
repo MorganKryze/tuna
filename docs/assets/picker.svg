@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="699" height="194" viewBox="0 0 699 194" role="img" aria-label="La liste des destinations de tuna">
-<title>tuna — choisir sa destination au lieu de la mémoriser</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="699" height="194" viewBox="0 0 699 194" role="img" aria-label="the tuna destination list">
+<title>tuna — pick your destination instead of remembering it</title>
 <g transform="translate(0,0)">
 <rect width="699" height="194" rx="10" fill="#0d1117"/>
 <circle cx="26" cy="24" r="6" fill="#ff5f57"/>
@@ -10,15 +10,15 @@
 <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" xml:space="preserve">
 <text x="38.8" y="67.0" fill="#39c5cf">❯</text>
 <text x="55.6" y="67.0" fill="#39c5cf">▏</text>
-<text x="64.0" y="67.0" fill="#6e7681">tapez pour filtrer</text>
+<text x="64.0" y="67.0" fill="#6e7681">type to filter</text>
 <text x="652.0" y="67.0" fill="#6e7681">2/2</text>
 <text x="38.8" y="109.0" fill="#39c5cf">▌</text>
-<text x="55.6" y="109.0" fill="#f0f6fc" font-weight="600">hyperviseur</text>
-<text x="148.0" y="109.0" fill="#c9d1d9">   Cockpit + orchestrateur                           </text>
+<text x="55.6" y="109.0" fill="#f0f6fc" font-weight="600">hypervisor</text>
+<text x="139.6" y="109.0" fill="#c9d1d9">   Cockpit and the orchestrator                       </text>
 <text x="593.2" y="109.0" fill="#6e7681">9090  9120</text>
-<text x="22.0" y="130.0" fill="#c9d1d9">    vm-backup     </text>
-<text x="173.2" y="130.0" fill="#6e7681">Duplicati d'une VM, joignable seulement depuis…</text>
+<text x="22.0" y="130.0" fill="#c9d1d9">    vm-backup    </text>
+<text x="164.8" y="130.0" fill="#6e7681">Duplicati on a VM, reachable only from its host </text>
 <text x="593.2" y="130.0" fill="#6e7681">      8201</text>
-<text x="22.0" y="172.0" fill="#6e7681">    ↑↓ naviguer    ⏎ ouvrir    ⎋ annuler</text>
+<text x="22.0" y="172.0" fill="#6e7681">    ↑↓ move    ⏎ open    ⎋ cancel</text>
 </g></g>
 </svg>

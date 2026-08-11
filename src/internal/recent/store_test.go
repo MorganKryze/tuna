@@ -8,11 +8,11 @@ import (
 )
 
 func TestSurvivesARoundTripAndAMissingFile(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "sous-dossier", "recent")
+	p := filepath.Join(t.TempDir(), "subdir", "recent")
 
 	// A first run has no state file, and that is not an error.
 	if got := Load(p); len(got) != 0 {
-		t.Fatalf("fichier absent doit donner une liste vide, obtenu %v", got)
+		t.Fatalf("a missing file has to give an empty list, got %v", got)
 	}
 	// Save creates the directory: ~/.local/state/tuna does not exist on a
 	// fresh machine.
@@ -20,7 +20,7 @@ func TestSurvivesARoundTripAndAMissingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := Load(p); !equal(got, []string{"b", "a"}) {
-		t.Fatalf("attendu [b a], obtenu %v", got)
+		t.Fatalf("want [b a], got %v", got)
 	}
 
 	// A corrupt file is not worth an error either: the worst outcome is a
@@ -29,7 +29,7 @@ func TestSurvivesARoundTripAndAMissingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := Load(p); len(got) != 0 {
-		t.Fatalf("lignes vides doivent être ignorées, obtenu %v", got)
+		t.Fatalf("blank lines have to be ignored, got %v", got)
 	}
 }
 
@@ -41,19 +41,19 @@ func TestLoadTrimsHandEdits(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := Load(p); !equal(got, []string{"b", "a"}) {
-		t.Fatalf("attendu [b a], obtenu %v", got)
+		t.Fatalf("want [b a], got %v", got)
 	}
 }
 
 func TestPathFollowsXDG(t *testing.T) {
-	t.Setenv("XDG_STATE_HOME", "/ailleurs")
-	if got, want := Path(), filepath.Join("/ailleurs", "tuna", "recent"); got != want {
-		t.Fatalf("attendu %q, obtenu %q", want, got)
+	t.Setenv("XDG_STATE_HOME", "/elsewhere")
+	if got, want := Path(), filepath.Join("/elsewhere", "tuna", "recent"); got != want {
+		t.Fatalf("want %q, got %q", want, got)
 	}
 
 	t.Setenv("XDG_STATE_HOME", "")
 	got := Path()
 	if !strings.HasSuffix(got, filepath.Join(".local", "state", "tuna", "recent")) {
-		t.Fatalf("sans XDG le chemin doit retomber sur ~/.local/state, obtenu %q", got)
+		t.Fatalf("without XDG the path has to fall back to ~/.local/state, got %q", got)
 	}
 }

@@ -8,20 +8,20 @@ import (
 
 func TestBumpMovesToFrontWithoutDuplicating(t *testing.T) {
 	cases := []struct {
-		nom     string
-		start   []string
-		chosen  string
-		attendu []string
+		name   string
+		start  []string
+		chosen string
+		want   []string
 	}{
-		{"déjà en tête", []string{"a", "b", "c"}, "a", []string{"a", "b", "c"}},
-		{"au milieu", []string{"a", "b", "c"}, "b", []string{"b", "a", "c"}},
-		{"jamais vu", []string{"a", "b"}, "z", []string{"z", "a", "b"}},
-		{"liste vide", nil, "a", []string{"a"}},
+		{"already at the front", []string{"a", "b", "c"}, "a", []string{"a", "b", "c"}},
+		{"in the middle", []string{"a", "b", "c"}, "b", []string{"b", "a", "c"}},
+		{"never seen", []string{"a", "b"}, "z", []string{"z", "a", "b"}},
+		{"empty list", nil, "a", []string{"a"}},
 	}
 	for _, c := range cases {
-		t.Run(c.nom, func(t *testing.T) {
-			if got := Bump(c.start, c.chosen); !equal(got, c.attendu) {
-				t.Fatalf("attendu %v, obtenu %v", c.attendu, got)
+		t.Run(c.name, func(t *testing.T) {
+			if got := Bump(c.start, c.chosen); !equal(got, c.want) {
+				t.Fatalf("want %v, got %v", c.want, got)
 			}
 		})
 	}
@@ -33,20 +33,20 @@ func TestBumpMovesToFrontWithoutDuplicating(t *testing.T) {
 func TestOrderPutsRecentFirstAndDropsUnknowns(t *testing.T) {
 	dests := []config.Destination{{Name: "a"}, {Name: "b"}, {Name: "c"}}
 
-	got := names(Order(dests, []string{"c", "disparue", "a"}))
-	if attendu := []string{"c", "a", "b"}; !equal(got, attendu) {
-		t.Fatalf("attendu %v, obtenu %v", attendu, got)
+	got := names(Order(dests, []string{"c", "gone", "a"}))
+	if want := []string{"c", "a", "b"}; !equal(got, want) {
+		t.Fatalf("want %v, got %v", want, got)
 	}
 
 	// Never used: config order stands, nothing is lost.
 	got = names(Order(dests, nil))
-	if attendu := []string{"a", "b", "c"}; !equal(got, attendu) {
-		t.Fatalf("attendu %v, obtenu %v", attendu, got)
+	if want := []string{"a", "b", "c"}; !equal(got, want) {
+		t.Fatalf("want %v, got %v", want, got)
 	}
 
 	// A name twice over in a hand-edited file must not duplicate the row.
 	got = names(Order(dests, []string{"b", "b", "a"}))
-	if attendu := []string{"b", "a", "c"}; !equal(got, attendu) {
-		t.Fatalf("attendu %v, obtenu %v", attendu, got)
+	if want := []string{"b", "a", "c"}; !equal(got, want) {
+		t.Fatalf("want %v, got %v", want, got)
 	}
 }
