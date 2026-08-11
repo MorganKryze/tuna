@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+  # Actions are pinned to a SHA, which is exactly what nothing else watches:
+  # a pinned action never updates itself and never warns that it is stale.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
