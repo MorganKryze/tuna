@@ -188,3 +188,17 @@ func TestFailedKeepsSshsOwnWordsFirst(t *testing.T) {
 		t.Errorf("le reste est indenté dessous : %q", lines[1])
 	}
 }
+
+// The version is the first thing a bug report asks for, and the release
+// workflow's -ldflags only reaches the binaries it builds itself: an install
+// straight from a tag has to find its version somewhere else.
+func TestVersionFallsBackToTheBuildInfo(t *testing.T) {
+	// Under `go test` the build info exists but carries no module version,
+	// which is the same shape as a local `go build`.
+	if got := versionOr("dev"); got != "dev" {
+		t.Fatalf("une build locale doit garder le repli, obtenu %q", got)
+	}
+	if version == "" {
+		t.Error("la version affichée ne doit jamais être vide")
+	}
+}

@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -26,8 +27,21 @@ import (
 	"github.com/MorganKryze/tuna/src/internal/ui"
 )
 
-// version is stamped by the release workflow; a local build says so.
-var version = "dev"
+// version is stamped by the release workflow with -ldflags. `go install` and
+// `go build` cannot pass those, so an install from a tag would otherwise call
+// itself "dev" — and the version is the first thing a bug report asks for.
+var version = versionOr("dev")
+
+// versionOr reads the module version the toolchain records in the binary,
+// which is how `go install …@v0.1.0` knows what it installed. A local build
+// has none and keeps the fallback.
+func versionOr(fallback string) string {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok || bi.Main.Version == "" || bi.Main.Version == "(devel)" {
+		return fallback
+	}
+	return bi.Main.Version
+}
 
 func main() {
 	noRetry := flag.Bool("no-retry", false, "une seule tentative, pas de reconnexion")
