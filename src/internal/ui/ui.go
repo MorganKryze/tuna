@@ -45,13 +45,22 @@ func (t Theme) Wrap(code, s string) string {
 }
 
 // ColorOK reports whether to emit escape codes to f: honour NO_COLOR, honour
-// a terminal that says it cannot, and never colour a pipe.
+// a terminal that says it cannot, never colour a pipe — and let a caller that
+// knows better say so.
 //
 // https://no-color.org — the presence of the variable is the signal, whatever
-// its value, which is why this looks for the key rather than for "1".
+// its value, which is why this looks for the key rather than for "1". It wins
+// over CLICOLOR_FORCE: between two people asking for opposite things, the one
+// asking for less is the one to obey.
+//
+// CLICOLOR_FORCE is what lets colour survive a pipe, which is how the README's
+// screenshot is made from the real output rather than redrawn by hand.
 func ColorOK(f *os.File) bool {
 	if _, set := os.LookupEnv("NO_COLOR"); set {
 		return false
+	}
+	if v := os.Getenv("CLICOLOR_FORCE"); v != "" && v != "0" {
+		return true
 	}
 	if os.Getenv("TERM") == "dumb" {
 		return false

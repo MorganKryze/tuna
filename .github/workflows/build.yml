@@ -36,6 +36,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write # publie les badges sur la branche orpheline `badges`
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -43,9 +45,24 @@ jobs:
           go-version: stable
       - name: measure and gate
         run: |
-          go test -covermode=atomic -coverprofile=cov.out ./...
+          # Une exécution, deux nombres. C'est `-json` qui rend le compte
+          # possible, donc la sortie lisible est reconstruite depuis le même
+          # fichier en cas d'échec : sinon une build rouge affiche un mur de
+          # JSON et rien de lisible.
+          if ! go test -covermode=atomic -coverpkg=./src/... \
+            -coverprofile=cov.out -json ./src/... > tests.json; then
+            jq -r 'select(.Action == "output") | .Output' tests.json | tail -60
+            exit 1
+          fi
+          # Sous-tests compris : un cas de table qui peut échouer seul est un
+          # test. Dédupliqué par paquet et par nom, sinon un paquet testé deux
+          # fois dans une même exécution compterait deux fois.
+          count=$(jq -r 'select(.Action == "pass" and .Test != null)
+            | "\(.Package)\t\(.Test)"' tests.json | sort -u | wc -l | tr -d ' ')
           pct=$(go tool cover -func=cov.out | awk '/^total:/ {sub(/%/,"",$NF); print $NF}')
-          echo "coverage: ${pct}%"
+          echo "coverage: ${pct}%, ${count} tests"
+          echo "PCT=$pct" >> "$GITHUB_ENV"
+          echo "TESTS=$count" >> "$GITHUB_ENV"
           # Plancher calé sur la mesure du jour, 68,8 %, avec trois points de
           # marge. Le total dit moins que le détail : ui et port sont à 100 %, config et
           # tunnel à 97 %, recent à 94 %. Ce qui pèse en dessous, c'est
@@ -58,3 +75,10 @@ jobs:
           # monde sans rien prouver.
           awk -v p="$pct" 'BEGIN { exit (p + 0 >= 65) ? 0 : 1 }' \
             || { echo "::error::couverture ${pct}% sous le plancher de 65%"; exit 1; }
+
+      # Un seul système publie, sinon les deux se poussent dessus à tour de
+      # rôle sur la même branche. ubuntu parce que c'est celui qui compte le
+      # plus de tests : le runner ssh en a de spécifiques à Unix.
+      - name: publish badges
+        if: matrix.os == 'ubuntu-latest' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: bash .github/badges.sh "$PCT" "$TESTS"

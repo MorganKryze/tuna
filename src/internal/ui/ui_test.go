@@ -92,6 +92,23 @@ func TestColorOKSaysNo(t *testing.T) {
 	if ColorOK(w) {
 		t.Error("TERM=dumb doit couper la couleur")
 	}
+
+	// CLICOLOR_FORCE overrides the pipe and the dumb terminal, and NO_COLOR
+	// overrides it in turn: between two people asking for opposite things,
+	// the one asking for less wins.
+	t.Setenv("CLICOLOR_FORCE", "1")
+	if !ColorOK(w) {
+		t.Error("CLICOLOR_FORCE doit forcer la couleur dans un tube")
+	}
+	t.Setenv("CLICOLOR_FORCE", "0")
+	if ColorOK(w) {
+		t.Error(`CLICOLOR_FORCE="0" ne force rien`)
+	}
+	t.Setenv("CLICOLOR_FORCE", "1")
+	t.Setenv("NO_COLOR", "")
+	if ColorOK(w) {
+		t.Error("NO_COLOR doit primer sur CLICOLOR_FORCE")
+	}
 }
 
 func unset(t *testing.T, key string) {

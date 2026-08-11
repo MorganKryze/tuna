@@ -1,16 +1,26 @@
+<div align="center">
+
 # tuna
 
-Pick an admin tunnel from a list instead of remembering its name, and keep it
-alive when the wifi drops.
+**Pick an admin tunnel from a list instead of remembering its name — and keep
+it alive when the wifi drops.**
 
-```text
-  ❯ ▏tapez pour filtrer                                                      2/2
+[![Build](https://github.com/MorganKryze/tuna/actions/workflows/build.yml/badge.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
+[![Security](https://github.com/MorganKryze/tuna/actions/workflows/security.yml/badge.svg)](https://github.com/MorganKryze/tuna/actions/workflows/security.yml)
+[![Tests](https://raw.githubusercontent.com/MorganKryze/tuna/badges/tests.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
+[![Coverage](https://raw.githubusercontent.com/MorganKryze/tuna/badges/coverage.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/MorganKryze/tuna?label=release&color=247b7b)](https://github.com/MorganKryze/tuna/releases)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
-  ▌ hyperviseur   Cockpit + orchestrateur                             9090  9120
-    vm-backup     Duplicati d'une VM, joignable seulement depuis l…         8201
+[![Go](https://img.shields.io/badge/Go-single%20static%20binary-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Dependencies](https://img.shields.io/badge/dependencies-3-247b7b)](CONTRIBUTING.md#ground-rules)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Linux-lightgrey)](https://github.com/MorganKryze/tuna/releases)
 
-    ↑↓ naviguer    ⏎ ouvrir    ⎋ annuler
-```
+<img src="docs/assets/picker.svg" alt="La liste des destinations : nom, description, et les ports locaux sur lesquels elles répondront." width="700">
+
+</div>
+
+> A tunnel you have to remember the name of is a tunnel you end up not using.
 
 Type to filter — the matched text is underlined as you go — arrows to move,
 Enter to open. `tuna --preview` prints that list without opening anything,

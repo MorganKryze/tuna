@@ -16,6 +16,11 @@ coverage:
 lint:
     golangci-lint run
 
+# Régénère la capture du README depuis la sortie réelle du binaire.
+# À relancer dès que le dessin du picker change.
+shot: build
+    python3 scripts/shot.py "$PWD/tuna" docs/assets/picker.svg 78
+
 # À lancer une fois après le clone : sans ça, le hook n'existe pas.
 hooks:
     git config core.hooksPath githooks
