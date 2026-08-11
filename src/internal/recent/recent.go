@@ -1,13 +1,22 @@
-package main
+// Package recent keeps the order in which destinations were last used. The
+// order is the data: no timestamps, no JSON, one name per line, most recent
+// first. A file you can read with cat is a file you can repair with vim.
+//
+// It knows nothing about the picker. Recency is computed here and handed to
+// the picker as an already-sorted list, which is what makes both testable
+// without a terminal.
+package recent
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/MorganKryze/tuna/src/internal/config"
 )
 
-// StatePath honours XDG_STATE_HOME and falls back to ~/.local/state.
-func StatePath() string {
+// Path honours XDG_STATE_HOME and falls back to ~/.local/state.
+func Path() string {
 	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
 		return filepath.Join(dir, "tuna", "recent")
 	}
@@ -18,9 +27,9 @@ func StatePath() string {
 	return filepath.Join(home, ".local", "state", "tuna", "recent")
 }
 
-// LoadRecent never fails. A missing or damaged order file costs a list in the
-// wrong order, which is not worth refusing to start over.
-func LoadRecent(path string) []string {
+// Load never fails. A missing or damaged order file costs a list in the wrong
+// order, which is not worth refusing to start over.
+func Load(path string) []string {
 	body, err := os.ReadFile(path)
 	if err != nil {
 		return nil
@@ -34,7 +43,9 @@ func LoadRecent(path string) []string {
 	return out
 }
 
-func SaveRecent(path string, names []string) error {
+// Save creates the directory on the way: ~/.local/state/tuna does not exist
+// on a fresh machine.
+func Save(path string, names []string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -55,13 +66,14 @@ func Bump(names []string, chosen string) []string {
 
 // Order sorts dests by the recency list, then appends whatever the list does
 // not mention, in config order. Names in recent that no longer exist in the
-// config are dropped here, which is the whole cleanup mechanism.
-func Order(dests []Destination, recent []string) []Destination {
-	byName := make(map[string]Destination, len(dests))
+// config are dropped here, which is the whole cleanup mechanism: a deleted
+// destination disappears on its own, with no migration and no housekeeping.
+func Order(dests []config.Destination, recent []string) []config.Destination {
+	byName := make(map[string]config.Destination, len(dests))
 	for _, d := range dests {
 		byName[d.Name] = d
 	}
-	out := make([]Destination, 0, len(dests))
+	out := make([]config.Destination, 0, len(dests))
 	placed := make(map[string]bool, len(dests))
 	for _, name := range recent {
 		if d, ok := byName[name]; ok && !placed[name] {

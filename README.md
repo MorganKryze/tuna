@@ -27,7 +27,7 @@ agent — a hypervisor, a control plane, a gateway.
 ## Install
 
 ```sh
-go install github.com/MorganKryze/tuna@latest
+go install github.com/MorganKryze/tuna/src/cmd/tuna@latest
 ```
 
 Or grab a binary from the [Releases](https://github.com/MorganKryze/tuna/releases)

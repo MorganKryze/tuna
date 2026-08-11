@@ -4,7 +4,7 @@ default:
     @just --list
 
 build:
-    go build -o tuna .
+    go build -o tuna ./src/cmd/tuna
 
 test:
     go test ./...

@@ -1,4 +1,7 @@
-package main
+// Package config reads and validates destinations.toml. It depends on
+// nothing else in the program: every other package takes what it needs from
+// here, and none of them hand anything back.
+package config
 
 import (
 	"fmt"
@@ -33,8 +36,8 @@ type Config struct {
 	Destination []Destination `toml:"destination"`
 }
 
-// ConfigPath honours XDG_CONFIG_HOME and falls back to ~/.config.
-func ConfigPath() string {
+// Path honours XDG_CONFIG_HOME and falls back to ~/.config.
+func Path() string {
 	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
 		return filepath.Join(dir, "tuna", "destinations.toml")
 	}
@@ -46,7 +49,7 @@ func ConfigPath() string {
 	return filepath.Join(home, ".config", "tuna", "destinations.toml")
 }
 
-func LoadConfig(path string) (*Config, error) {
+func Load(path string) (*Config, error) {
 	var cfg Config
 	md, err := toml.DecodeFile(path, &cfg)
 	if err != nil {
@@ -68,40 +71,6 @@ func LoadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-func (c *Config) validate() error {
-	if len(c.Destination) == 0 {
-		return fmt.Errorf("aucune destination définie")
-	}
-	seen := make(map[string]bool, len(c.Destination))
-	for i := range c.Destination {
-		d := &c.Destination[i]
-		switch {
-		case d.Name == "":
-			return fmt.Errorf("destination n°%d : name est obligatoire", i+1)
-		case seen[d.Name]:
-			return fmt.Errorf("destination %q : nom en double", d.Name)
-		case d.Host == "":
-			return fmt.Errorf("destination %q : host est obligatoire", d.Name)
-		case len(d.Forward) == 0:
-			return fmt.Errorf("destination %q : au moins un forward est nécessaire", d.Name)
-		case d.Port < 0 || d.Port > 65535:
-			return fmt.Errorf("destination %q : port %d hors bornes", d.Name, d.Port)
-		}
-		seen[d.Name] = true
-		for _, f := range d.Forward {
-			if f.Local < 1 || f.Local > 65535 {
-				return fmt.Errorf("destination %q : port local %d hors bornes", d.Name, f.Local)
-			}
-			// ssh wants host:port on the far side. Catching it here beats
-			// catching it as an opaque ssh usage error three seconds later.
-			if !strings.Contains(f.To, ":") {
-				return fmt.Errorf("destination %q : cible %q doit s'écrire hôte:port", d.Name, f.To)
-			}
-		}
-	}
-	return nil
-}
-
 func (c *Config) Find(name string) (*Destination, bool) {
 	for i := range c.Destination {
 		if c.Destination[i].Name == name {
@@ -109,4 +78,14 @@ func (c *Config) Find(name string) (*Destination, bool) {
 		}
 	}
 	return nil, false
+}
+
+// Names lists every destination in config order, for the "unknown
+// destination" message.
+func (c *Config) Names() []string {
+	out := make([]string, 0, len(c.Destination))
+	for _, d := range c.Destination {
+		out = append(out, d.Name)
+	}
+	return out
 }

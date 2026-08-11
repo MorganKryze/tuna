@@ -7,7 +7,7 @@ templates waiting to guide you through it, [Bug report](https://github.com/Morga
 
 ```sh
 go test ./...
-go build -o tuna . && ./tuna
+go build -o tuna ./src/cmd/tuna && ./tuna
 ```
 
 With [just](https://just.systems) installed, `just` lists the shortcuts:
@@ -22,24 +22,45 @@ round trip locally. The hook runs gofmt, `go vet` and the tests.
 
 ## Layout
 
-One package, five files at the root. At six hundred lines a directory tree
-costs navigation without isolating anything.
-
 ```text
-config.go   read and validate destinations.toml; resolve its path
-recent.go   the recency order: read it, bump a name to the front, write it
-pick.go     the picker: state + keystroke → state (pure), then the ANSI drawing
-run.go      ssh arguments, failure classification, the reconnection loop
-main.go     flags, wiring, SIGINT, the real runner
+src/cmd/tuna/
+  main.go       wiring only: flags, the order things are called in, messages
+  ssh.go        the real runner: exec, SIGINT, the stderr tee
+src/internal/
+  config/       read and validate destinations.toml; depends on nothing
+  recent/       the recency order: read it, bump a name to the front, write it
+  pick/         the picker
+  tunnel/       ssh arguments, failure classification, the reconnection loop
+githooks/       pre-commit, installed by `just hooks`
 ```
 
-`main.go` is the only file allowed to be thin and untested: everything in it
-is wiring between pieces that are already tested. If logic shows up there, it
-is in the wrong place.
+The dependency graph runs one way: `config` knows nothing; `recent`, `pick`
+and `tunnel` know `config`; `main` wires them. Keep it that way. A test lives
+beside the package it exercises.
 
-The one-way rule that makes the tests possible: `pick.go` does not sort and
-`recent.go` does not know the picker. Recency is computed upstream and handed
-to the picker as an argument.
+Inside a package, one file per concern, and the seam is always the same one —
+what can be tested without the world, and what cannot:
+
+```text
+pick/pick.go     Picker, Matches, Update: pure, state + keystroke → state
+pick/keys.go     readKey: bytes → keystroke, pure
+pick/term.go     render and Pick: the only code that touches a terminal
+tunnel/tunnel.go Connect: the state machine, driven by an injectable Runner
+tunnel/args.go   SSHArgs
+tunnel/hopeless.go  which stderr means retrying is pointless
+config/config.go    types, paths, loading
+config/validate.go  what a valid destinations.toml is
+```
+
+`term.go` and `main.go` are the only files allowed to be thin and untested.
+Everything they do beyond drawing or wiring lives in a package that is tested
+without a TTY. If logic shows up in either, it is in the wrong place.
+
+The rule that makes it work: `pick` does not sort and `recent` does not know
+the picker exists. Recency is computed upstream and handed over as an
+argument. Likewise `tunnel.Connect` never sees `os/exec`, a signal or a clock:
+it calls a `Runner` that reports how long the tunnel lived and how it ended,
+which is why the entire reconnection policy is tested in microseconds.
 
 ## Ground rules
 
