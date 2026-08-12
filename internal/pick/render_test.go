@@ -270,3 +270,24 @@ func TestNarrowTerminalsSaySoInsteadOfDrawingOrPanicking(t *testing.T) {
 		t.Errorf("width 20 has to draw the list:\n%s", frame)
 	}
 }
+
+// The only test of highlight asserted that it does not change the text, which
+// `return s` satisfies. This one asserts it does something, and does it in the
+// right place.
+func TestHighlightMarksTheMatchAndNothingElse(t *testing.T) {
+	got := highlight("Duplicati on the gateway", "gate", ui.Theme(true))
+	if !strings.Contains(got, ui.Underline+"gate"+ui.NoUnderline) {
+		t.Fatalf("the match has to be underlined, got %q", got)
+	}
+	if strings.Count(got, ui.Underline) != 1 {
+		t.Errorf("only the match, and only once: %q", got)
+	}
+	// Case folded on the needle, and the text keeps the case it was written in.
+	if got := highlight("Duplicati", "DUPL", ui.Theme(true)); !strings.Contains(got, ui.Underline+"Dupl") {
+		t.Errorf("matching ignores case, the text does not: %q", got)
+	}
+	// Colour off means no codes at all, whatever matched.
+	if got := highlight("Duplicati", "dupl", ui.Theme(false)); got != "Duplicati" {
+		t.Errorf("without colour there is nothing to mark, got %q", got)
+	}
+}

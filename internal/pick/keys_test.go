@@ -44,3 +44,29 @@ func TestReadKeyTellsArrowsFromEscape(t *testing.T) {
 		})
 	}
 }
+
+// readKey used to cast the first byte to a rune, so "é" became "Ã" and its
+// second byte vanished. The config file this filters against ships accented
+// descriptions, so the case is not hypothetical.
+func TestReadKeyDecodesUTF8(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		in   string
+		want rune
+	}{
+		{"accented", "é", 'é'},
+		{"beyond the BMP", "🐟", '🐟'},
+		{"plain ASCII still works", "h", 'h'},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			k, r := readKey([]byte(c.in))
+			if k != KeyRune || r != c.want {
+				t.Fatalf("want (KeyRune, %q), got (%v, %q)", c.want, k, r)
+			}
+		})
+	}
+	// Half of a rune is not a character, and must not become one.
+	if k, _ := readKey([]byte{0xC3}); k != KeyNone {
+		t.Errorf("a stray continuation byte must not reach the filter, got %v", k)
+	}
+}

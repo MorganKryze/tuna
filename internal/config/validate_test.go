@@ -68,6 +68,17 @@ forward = [{ local = 70000, to = "127.0.0.1:1" }]`,
 			"70000",
 		},
 		{
+			// -1 is valid TOML and reaches `ssh -p -1`. Dropping the lower
+			// bound used to leave the suite green.
+			"negative ssh port",
+			`[[destination]]
+name = "a"
+host = "h"
+port = -1
+forward = [{ local = 1, to = "127.0.0.1:1" }]`,
+			"-1",
+		},
+		{
 			"local port at zero",
 			`[[destination]]
 name = "a"

@@ -60,3 +60,19 @@ func TestPathFollowsXDG(t *testing.T) {
 		t.Fatalf("without XDG the path has to fall back to ~/.local/state, got %q", got)
 	}
 }
+
+// The order file records which machines someone administers, so it is theirs
+// to read and nobody else's. Widening the mode used to leave the suite green.
+func TestTheOrderFileIsNotWorldReadable(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "sub", "recent")
+	if err := Save(p, []string{"a"}); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Stat(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o600 {
+		t.Errorf("want mode 0600, got %#o", perm)
+	}
+}

@@ -264,3 +264,46 @@ func TestOnUpIsOnlyCalledByTheRunner(t *testing.T) {
 		return f.run(ctx, d, up)
 	}, r)
 }
+
+// Notify's arguments used to be untested: swapping them read as "retrying 3/1
+// in 1s" on screen and no test noticed.
+func TestNotifyIsToldWhichAttemptAndHowLong(t *testing.T) {
+	type notice struct {
+		attempt, max int
+		wait         time.Duration
+	}
+	var seen []notice
+
+	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
+	r := testRetry()
+	r.Notify = func(attempt, max int, wait time.Duration) {
+		seen = append(seen, notice{attempt, max, wait})
+	}
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r)
+
+	want := []notice{{1, 3, time.Second}, {2, 3, 2 * time.Second}, {3, 3, 4 * time.Second}}
+	if len(seen) != len(want) {
+		t.Fatalf("want %d notices, got %v", len(want), seen)
+	}
+	for i := range want {
+		if seen[i] != want[i] {
+			t.Errorf("notice %d: want %+v, got %+v", i+1, want[i], seen[i])
+		}
+	}
+}
+
+// A cancelled context stops the loop wherever it is, including in the middle
+// of a backoff. Most of a failing episode is spent waiting, and that is when
+// somebody reaches for Ctrl-C.
+func TestCancellingDuringTheBackoffStopsTheLoop(t *testing.T) {
+	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
+	r := testRetry()
+	r.Wait = func(context.Context, time.Duration) error { return context.Canceled }
+
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r); err != nil {
+		t.Fatalf("being asked to stop is not a failure: %v", err)
+	}
+	if f.calls != 1 {
+		t.Fatalf("want 1 launch before the interrupted wait, got %d", f.calls)
+	}
+}

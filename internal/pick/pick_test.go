@@ -134,3 +134,41 @@ func TestAnUnknownKeyChangesNothing(t *testing.T) {
 		t.Fatalf("KeyNone has to be neutral, got %+v chosen=%q done=%v", next, chosen, done)
 	}
 }
+
+// Backspace used to cut one byte, which left half of "é" in the filter.
+func TestBackspaceRemovesAWholeRune(t *testing.T) {
+	p := demo()
+	for _, r := range "é🐟" {
+		p, _, _ = p.Update(KeyRune, r)
+	}
+	if p.Filter != "é🐟" {
+		t.Fatalf("want the runes as typed, got %q", p.Filter)
+	}
+	p, _, _ = p.Update(KeyBackspace, 0)
+	if p.Filter != "é" {
+		t.Fatalf("one backspace removes one rune: want %q, got %q", "é", p.Filter)
+	}
+	p, _, _ = p.Update(KeyBackspace, 0)
+	if p.Filter != "" {
+		t.Fatalf("want an empty filter, got %q", p.Filter)
+	}
+}
+
+// Deleting the whole KeyUp branch used to leave the suite green: the test that
+// claims to cover both ends only ever proved the guard at the top.
+func TestArrowUpActuallyMovesTheCursor(t *testing.T) {
+	p := demo()
+	for range 2 {
+		p, _, _ = p.Update(KeyDown, 0)
+	}
+	if p.Cursor != 2 {
+		t.Fatalf("setup: want cursor 2, got %d", p.Cursor)
+	}
+	p, _, _ = p.Update(KeyUp, 0)
+	if p.Cursor != 1 {
+		t.Fatalf("up has to move the cursor: want 1, got %d", p.Cursor)
+	}
+	if _, chosen, _ := p.Update(KeyEnter, 0); chosen != "gateway" {
+		t.Fatalf("up has to land on the row above: want gateway, got %q", chosen)
+	}
+}

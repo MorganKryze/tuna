@@ -12,6 +12,7 @@ package pick
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/MorganKryze/tunny/internal/config"
 )
@@ -87,12 +88,11 @@ func (p Picker) Update(k Key, r rune) (Picker, string, bool) {
 		}
 
 	case KeyBackspace:
-		// Byte-wise, which is safe because readKey only ever emits ASCII:
-		// a filter is typed against destination names, and those are ASCII
-		// by convention. Accept a multi-byte rune here and this line starts
-		// cutting UTF-8 in half.
+		// One rune, not one byte. readKey emits whatever was typed, and
+		// cutting a byte off "é" leaves half an encoding in the filter.
 		if p.Filter != "" {
-			p.Filter = p.Filter[:len(p.Filter)-1]
+			_, size := utf8.DecodeLastRuneInString(p.Filter)
+			p.Filter = p.Filter[:len(p.Filter)-size]
 		}
 
 	case KeyRune:
