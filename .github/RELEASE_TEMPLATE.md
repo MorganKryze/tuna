@@ -35,7 +35,7 @@ One or two sentences: what this release is about, in plain words.
 go install github.com/MorganKryze/tuna/src/cmd/tuna@vX.Y.Z
 ```
 
-Or download one below — darwin and linux, amd64 and arm64. `SHA256SUMS` is
+Or take one below: darwin and linux, amd64 and arm64. `SHA256SUMS` is
 attached next to them, and every file carries a build attestation tying it to
 the workflow that produced it:
 
