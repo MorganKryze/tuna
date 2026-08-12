@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-only
 
 Newest first. Dates are release dates.
 
-## Unreleased
+## v0.2.0 (2026-08-12)
 
 ### ⚠️ Breaking
 
