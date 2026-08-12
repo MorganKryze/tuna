@@ -91,7 +91,11 @@ Config: %s
 	if *list {
 		cfg, err := config.Load(config.Path())
 		if err != nil {
-			os.Exit(1) // a shell completing a name has no use for the reason
+			// On stderr and not swallowed: the completions redirect it away
+			// themselves, and somebody running --list by hand to find out why
+			// their completion is empty deserves the reason.
+			fmt.Fprint(os.Stderr, failed(err, ui.ColorOK(os.Stderr)))
+			os.Exit(1)
 		}
 		for _, n := range cfg.Names() {
 			fmt.Println(n)
