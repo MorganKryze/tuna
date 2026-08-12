@@ -1,5 +1,5 @@
 <!-- Before cutting the release, check the README still shows what the picker
-     actually looks like:  just build && ./tuna --preview
+     actually looks like:  just build && ./tunny --preview
      Update the two code blocks at the top if the drawing has moved.
 
      Create the release with these notes, which also creates the tag and so
@@ -32,7 +32,7 @@ One or two sentences: what this release is about, in plain words.
 ## 📦 Binaries
 
 ```sh
-go install github.com/MorganKryze/tuna/src/cmd/tuna@vX.Y.Z
+go install github.com/MorganKryze/tunny/cmd/tunny@vX.Y.Z
 ```
 
 Or take one below: darwin and linux, amd64 and arm64. `SHA256SUMS` is
@@ -41,5 +41,5 @@ the workflow that produced it:
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
-gh attestation verify tuna-darwin-arm64 --repo MorganKryze/tuna
+gh attestation verify tunny-darwin-arm64 --repo MorganKryze/tunny
 ```

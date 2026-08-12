@@ -1,13 +1,13 @@
 # Contributing
 
 Not every contribution is code. Opening an issue is one, and there are two
-templates waiting to guide you through it, [Bug report](https://github.com/MorganKryze/tuna/issues/new?template=bug_report.md) and [Feature idea](https://github.com/MorganKryze/tuna/issues/new?template=feature_idea.md): each asks the few things that turn a report into something actionable.
+templates waiting to guide you through it, [Bug report](https://github.com/MorganKryze/tunny/issues/new?template=bug_report.md) and [Feature idea](https://github.com/MorganKryze/tunny/issues/new?template=feature_idea.md): each asks the few things that turn a report into something actionable.
 
 ## Dev loop
 
 ```sh
 go test ./...
-go build -o tuna ./src/cmd/tuna && ./tuna
+go build -o tunny ./cmd/tunny && ./tunny
 ```
 
 With [just](https://just.systems) installed, `just` lists the shortcuts:
@@ -23,17 +23,17 @@ round trip locally. The hook runs gofmt, `go vet` and the tests.
 ## Layout
 
 ```text
-src/cmd/tuna/
+cmd/tunny/
   main.go       wiring only: flags, the order things are called in, messages
-  ssh.go        the real runner: exec, SIGINT, the stderr tee
-src/internal/
+  ssh.go        the real runner: exec, signals, the stderr tee
+internal/
   config/       read and validate destinations.toml; depends on nothing
   recent/       the recency order: read it, bump a name to the front, write it
   pick/         the picker
   tunnel/       ssh arguments, failure classification, the reconnection loop
   port/         is this local port already taken?
   ui/           escape codes, when colour is allowed, column-aware padding,
-                and the one termios flag tuna clears
+                and the one termios flag tunny clears
 scripts/shot.py the README's picture and the social card, redrawn from the
                 real output
 githooks/       pre-commit, installed by `just hooks`
@@ -62,7 +62,7 @@ config/validate.go  what a valid destinations.toml is
 **Drawing is a pure function too.** `Frame(width, height, colour) string` takes
 its terminal as arguments instead of reading one, which is what lets the layout
 be asserted at every width from 20 to 200 columns, and looked at with
-`tuna --preview 60`. Two rules come with it, both enforced by tests: no line
+`tunny --preview 60`. Two rules come with it, both enforced by tests: no line
 may ever exceed the width, because a wrapped line makes the frame taller than
 it is counted to be and the redraw then erases the wrong rows; and colour must
 never change the geometry, so the same frame with and without escape codes has
@@ -80,9 +80,9 @@ which is why the entire reconnection policy is tested in microseconds.
 
 ## Ground rules
 
-- **Scope.** tuna opens one `ssh -N -L` at a time, in the foreground. No
+- **Scope.** tunny opens one `ssh -N -L` at a time, in the foreground. No
   daemon, no multiple tunnels, no `stop`, no state beyond an ordered list of
-  names. The [README](README.md#what-tuna-does-not-do) says where that line
+  names. The [README](README.md#what-tunny-does-not-do) says where that line
   sits and when each piece would be worth reconsidering.
 - **Dependencies: three, and a fourth needs an argument.** `BurntSushi/toml`
   because the standard library does not read TOML and TOML is the only
@@ -99,9 +99,9 @@ which is why the entire reconnection policy is tested in microseconds.
   second with no terminal, no clock and no network. `Connect` takes an
   injectable `Runner`; it does not know `os/exec`. Code that touches the
   terminal or a process stays thin and untested, by construction.
-- **Only tuna writes on tuna's screen.** The `^C` a terminal used to print when
+- **Only tunny writes on tunny's screen.** The `^C` a terminal used to print when
   you closed a tunnel came from the terminal driver rather than from here, and
-  tuna clears it for the life of the tunnel (`ECHOCTL`, in `ui/echo.go`). One
+  tunny clears it for the life of the tunnel (`ECHOCTL`, in `ui/echo.go`). One
   flag, never raw mode: ssh still holds that terminal and its host-key prompt
   needs ordinary echo. No test covers the flag, since checking it takes a pty
   and a real keystroke. Check it by hand against a build with the line removed,

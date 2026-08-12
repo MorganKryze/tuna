@@ -1,4 +1,4 @@
-# Copy to ~/.config/tuna/destinations.toml and edit.
+# Copy to ~/.config/tunny/destinations.toml and edit.
 # One destination is one SSH tunnel, with as many `forward` entries as there
 # are UIs behind it.
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Morgan Kryze <contact@libresoftware.cloud>
+# SPDX-License-Identifier: GPL-3.0-only
 """Draw the pictures the README and GitHub show, from the real program.
 
 Run through `just shot`. The point is that they cannot drift: each one is the
@@ -81,7 +83,7 @@ def panel(lines, ox, oy, cols, size=14):
         out.append(f'<circle cx="{pad + 4 + i * 18:.0f}" cy="24" r="6" fill="{c}"/>')
     out.append(
         f'<text x="{w / 2:.0f}" y="29" fill="#6e7681" text-anchor="middle"'
-        f' font-family="{MONO}" font-size="12">tuna</text>'
+        f' font-family="{MONO}" font-size="12">tunny</text>'
     )
     out.append(f'<path d="M0 40 H{w:.0f}" stroke="#21262d" stroke-width="1"/>')
 
@@ -111,7 +113,7 @@ def frames_of(binary, cols):
     # ports: a throwaway XDG root is what makes it impossible to leak one by
     # running this on the wrong machine.
     with tempfile.TemporaryDirectory() as tmp:
-        cfg = pathlib.Path(tmp) / "config" / "tuna"
+        cfg = pathlib.Path(tmp) / "config" / "tunny"
         cfg.mkdir(parents=True)
         shutil.copy(root / "destinations.example.toml", cfg / "destinations.toml")
         env = {k: v for k, v in os.environ.items() if k != "NO_COLOR"}
@@ -150,7 +152,7 @@ def banner_of(binary, root):
     """
     example = (root / "destinations.example.toml").read_text()
     with tempfile.TemporaryDirectory() as tmp:
-        cfg = pathlib.Path(tmp) / "config" / "tuna"
+        cfg = pathlib.Path(tmp) / "config" / "tunny"
         cfg.mkdir(parents=True)
         (cfg / "destinations.toml").write_text(
             re.sub(r'^(host = ")[^"]*(")', r"\1nowhere.invalid\2", example, flags=re.M)
@@ -201,8 +203,8 @@ def main():
         assets / "picker.svg",
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:.0f}" height="{h:.0f}"'
         f' viewBox="0 0 {w:.0f} {h:.0f}" role="img"'
-        f' aria-label="the tuna destination list">\n'
-        f"<title>tuna — pick your destination instead of remembering it</title>\n"
+        f' aria-label="the tunny destination list">\n'
+        f"<title>tunny — pick your destination instead of remembering it</title>\n"
         + "\n".join(body)
         + "\n</svg>",
     )
@@ -212,10 +214,10 @@ def main():
     cw, ch = 1280, 640
     card = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{cw}" height="{ch}"'
-        f' viewBox="0 0 {cw} {ch}" role="img" aria-label="tuna">',
+        f' viewBox="0 0 {cw} {ch}" role="img" aria-label="tunny">',
         f'<rect width="{cw}" height="{ch}" fill="#010409"/>',
         f'<text x="{cw // 2}" y="152" fill="#f0f6fc" text-anchor="middle"'
-        f' font-family="{MONO}" font-size="78" font-weight="700">tuna</text>',
+        f' font-family="{MONO}" font-size="78" font-weight="700">tunny</text>',
         f'<text x="{cw // 2}" y="208" fill="#39c5cf" text-anchor="middle"'
         f' font-family="{SANS}" font-size="27">pick your destination instead of'
         f" remembering it</text>",

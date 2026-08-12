@@ -4,7 +4,7 @@ default:
     @just --list
 
 build:
-    go build -o tuna ./src/cmd/tuna
+    go build -o tunny ./cmd/tunny
 
 test:
     go test ./...
@@ -24,7 +24,7 @@ lint:
 # Redraws the README's pictures from the binary's real output.
 # Re-run it whenever the picker's drawing changes.
 shot: build
-    python3 scripts/shot.py "$PWD/tuna" 78
+    python3 scripts/shot.py "$PWD/tunny" 78
 
 # Run once after cloning: without it the hook does not exist.
 hooks:

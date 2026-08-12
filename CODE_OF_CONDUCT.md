@@ -2,7 +2,7 @@
 
 ## The short version
 
-Be decent. tuna is a small project about not having to remember the name of a
+Be decent. tunny is a small project about not having to remember the name of a
 tunnel, and the same courtesy applies to the people who show up here.
 
 ## What is expected

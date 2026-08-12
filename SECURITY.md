@@ -27,7 +27,7 @@ They also carry a build attestation, which is what ties an artifact to the
 workflow that produced it rather than to whoever uploaded it:
 
 ```sh
-gh attestation verify tuna-darwin-arm64 --repo MorganKryze/tuna
+gh attestation verify tunny-darwin-arm64 --repo MorganKryze/tunny
 ```
 
 CI runs `govulncheck` weekly, which is what surfaces a CVE in a dependency
@@ -35,11 +35,11 @@ without waiting for the next commit.
 
 ## Scope worth knowing
 
-tuna's attack surface is small on purpose: it makes no network connection of
+tunny's attack surface is small on purpose: it makes no network connection of
 its own, listens on nothing, and stores no secret. It reads one TOML file,
 writes one file of names, and executes `ssh` with an argument list. Everything
 that authenticates belongs to ssh and to your `~/.ssh/config`: keys, the agent,
-`known_hosts`, the host-key prompt. That is why tuna delegates instead of
+`known_hosts`, the host-key prompt. That is why tunny delegates instead of
 reimplementing any of it.
 
 The interesting reports are therefore about the argument list: a value in

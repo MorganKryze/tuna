@@ -1,25 +1,25 @@
 <div align="center">
 
-# tuna
+# tunny
 
 **Pick your admin SSH tunnel from a list instead of remembering its name.**
 
-[![Build](https://github.com/MorganKryze/tuna/actions/workflows/build.yml/badge.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
-[![Security](https://github.com/MorganKryze/tuna/actions/workflows/security.yml/badge.svg)](https://github.com/MorganKryze/tuna/actions/workflows/security.yml)
-[![Tests](https://raw.githubusercontent.com/MorganKryze/tuna/badges/tests.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
-[![Coverage](https://raw.githubusercontent.com/MorganKryze/tuna/badges/coverage.svg)](https://github.com/MorganKryze/tuna/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/MorganKryze/tuna?label=release&color=247b7b)](https://github.com/MorganKryze/tuna/releases)
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Build](https://github.com/MorganKryze/tunny/actions/workflows/build.yml/badge.svg)](https://github.com/MorganKryze/tunny/actions/workflows/build.yml)
+[![Security](https://github.com/MorganKryze/tunny/actions/workflows/security.yml/badge.svg)](https://github.com/MorganKryze/tunny/actions/workflows/security.yml)
+[![Tests](https://raw.githubusercontent.com/MorganKryze/tunny/badges/tests.svg)](https://github.com/MorganKryze/tunny/actions/workflows/build.yml)
+[![Coverage](https://raw.githubusercontent.com/MorganKryze/tunny/badges/coverage.svg)](https://github.com/MorganKryze/tunny/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/MorganKryze/tunny?label=release&color=247b7b)](https://github.com/MorganKryze/tunny/releases)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
 
 [![Go](https://img.shields.io/badge/Go-single%20static%20binary-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![Dependencies](https://img.shields.io/badge/dependencies-3-247b7b)](CONTRIBUTING.md#ground-rules)
-[![Platforms](https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Linux-lightgrey)](https://github.com/MorganKryze/tuna/releases)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Linux-lightgrey)](https://github.com/MorganKryze/tunny/releases)
 
-<img src="docs/assets/picker.svg" alt="The tuna picker: a filter line with a match count, then one row per destination showing its name, its description and the local ports it will answer on" width="700">
+<img src="docs/assets/picker.svg" alt="The tunny picker: a filter line with a match count, then one row per destination showing its name, its description and the local ports it will answer on" width="700">
 
 </div>
 
-> A tuna swims a long way and finds the same water again. So does this.
+> A tunny swims a long way and finds the same water again. So does this.
 
 You run three or four machines with no mesh agent on them, on purpose. The
 hypervisor, the control plane, the gateway. Their web UIs sit on a loopback
@@ -27,42 +27,42 @@ address you reach with `ssh -N -L`, the command runs long enough that you wrote
 it into a `justfile`, and by now you have forgotten which recipe was which.
 Change network and the tunnel dies without a word.
 
-tuna is that `justfile`, with the names on screen and a tunnel that comes back.
+tunny is that `justfile`, with the names on screen and a tunnel that comes back.
 
 ## Install
 
 ```sh
-go install github.com/MorganKryze/tuna/src/cmd/tuna@latest
+go install github.com/MorganKryze/tunny/cmd/tunny@latest
 ```
 
-Or take a binary from the [Releases](https://github.com/MorganKryze/tuna/releases)
+Or take a binary from the [Releases](https://github.com/MorganKryze/tunny/releases)
 page: darwin and linux, amd64 and arm64, with a `SHA256SUMS` and a build
 attestation next to them.
 
 ## Getting started
 
 ```sh
-mkdir -p ~/.config/tuna
-curl -o ~/.config/tuna/destinations.toml \
-  https://raw.githubusercontent.com/MorganKryze/tuna/main/destinations.example.toml
-$EDITOR ~/.config/tuna/destinations.toml
-tuna
+mkdir -p ~/.config/tunny
+curl -o ~/.config/tunny/destinations.toml \
+  https://raw.githubusercontent.com/MorganKryze/tunny/main/destinations.example.toml
+$EDITOR ~/.config/tunny/destinations.toml
+tunny
 ```
 
-Type to filter: tuna narrows the list on the name and the description at once,
+Type to filter: tunny narrows the list on the name and the description at once,
 underlines what matched, and keeps a count on the right. Arrows move, Enter
 opens, Escape gives up. The picture above is that list, drawn by the binary
 itself from the example config below.
 
 ```sh
-tuna              # the picker, most recent destination on top
-tuna vm-backup    # straight to it, no picker
-tuna --no-retry   # one attempt, no reconnection
-tuna --preview    # what the list looks like, without opening anything
+tunny              # the picker, most recent destination on top
+tunny vm-backup    # straight to it, no picker
+tunny --no-retry   # one attempt, no reconnection
+tunny --preview    # what the list looks like, without opening anything
 ```
 
-There is no `tuna add`, because the config is a file and a file belongs in an
-editor. There is no `tuna list` either: the picker is the list.
+There is no `tunny add`, because the config is a file and a file belongs in an
+editor. There is no `tunny list` either: the picker is the list.
 
 ## What a session looks like
 
@@ -91,12 +91,12 @@ Then, as it runs:
 four lines are how you tell an open tunnel from a hung one, and a recovered one
 from a closed one.
 
-The banner goes to stdout, so `tuna gateway | grep http` gets you the URLs.
+The banner goes to stdout, so `tunny gateway | grep http` gets you the URLs.
 Everything after it, including the four status lines, goes to stderr.
 
 ## Configuration
 
-`~/.config/tuna/destinations.toml`, honouring `XDG_CONFIG_HOME`. One
+`~/.config/tunny/destinations.toml`, honouring `XDG_CONFIG_HOME`. One
 destination is one ssh invocation, with as many `forward` entries as there are
 UIs behind it.
 
@@ -121,7 +121,7 @@ forward = [{ local = 8201, to = "127.0.0.1:8200", label = "Duplicati" }]
 
 | Key             | Required | What it does                                                                                                 |
 | --------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `name`          | yes      | what you type after `tuna`, and what the picker shows. Unique.                                               |
+| `name`          | yes      | what you type after `tunny`, and what the picker shows. Unique.                                               |
 | `desc`          | no       | the picker's second column, and part of what the filter searches.                                            |
 | `host`          | yes      | ssh's target. An alias from `~/.ssh/config` is the point: it already carries the user, the port and the key. |
 | `port`          | no       | becomes `-p`, for what the alias does not cover.                                                             |
@@ -132,19 +132,19 @@ forward = [{ local = 8201, to = "127.0.0.1:8200", label = "Duplicati" }]
 | `forward.label` | no       | the name printed next to the URL. Skip it and every forward on that destination shows the destination's own name, which two of them cannot tell apart. |
 
 `host`, `port` and `jump` hand the work to `~/.ssh/config` instead of copying
-it. tuna builds an argument list and runs the real ssh binary, so your aliases,
+it. tunny builds an argument list and runs the real ssh binary, so your aliases,
 `ProxyJump`, the agent, `known_hosts` and the host-key prompt keep working the
 way you set them up.
 
-tuna validates the file before it does anything: unique names, at least one
+tunny validates the file before it does anything: unique names, at least one
 forward, ports in range, a `host:port` on the far side. A key it does not know
 is an error too, since `forwards` instead of `forward` would otherwise leave
 you a destination with no tunnel and no complaint.
 
-Recency lives in `~/.local/state/tuna/recent`, honouring `XDG_STATE_HOME`. One
+Recency lives in `~/.local/state/tunny/recent`, honouring `XDG_STATE_HOME`. One
 name per line, most recent first. The order is the data, so a file you can read
 with `cat` you can repair with `vim`. Names that left the config get dropped
-when tuna reads it, which is the whole cleanup mechanism.
+when tunny reads it, which is the whole cleanup mechanism.
 
 ## Reconnection
 
@@ -156,7 +156,7 @@ network changes while a destination that is genuinely down gives up in three
 quick tries. `ssh -N` stays quiet when things go well, so how long the process
 lived is the least fragile success signal available.
 
-**Ctrl-C never relaunches.** tuna catches the interrupt itself rather than
+**Ctrl-C never relaunches.** tunny catches the interrupt itself rather than
 reading ssh's exit code, because a tunnel you cannot kill is the worst thing
 this program could do to you.
 
@@ -165,7 +165,7 @@ fail the same way three times over: `Permission denied` and
 `Could not resolve hostname`. Host down, network gone, wifi switched, laptop
 woken from sleep: all worth another try.
 
-A third one never reaches ssh. tuna binds the local port first, the same
+A third one never reaches ssh. tunny binds the local port first, the same
 syscall `ssh -L` is about to make, so the picker marks a destination you cannot
 open before you choose it:
 
@@ -185,7 +185,7 @@ tunnel:
 `Address already in use` stays on the hopeless list as a backstop, since a port
 can be taken in the moment between the check and the launch.
 
-tuna always passes `-o ExitOnForwardFailure=yes`. Without it, ssh stays
+tunny always passes `-o ExitOnForwardFailure=yes`. Without it, ssh stays
 connected with a dead forward and you find out from a browser tab minutes
 later.
 
@@ -196,21 +196,24 @@ Colour follows [NO_COLOR](https://no-color.org) and never reaches a pipe.
 that: between two people asking for opposite things, the one asking for less
 gets their way. The layout gives way in a fixed order as your
 terminal narrows: port labels first, then the ports, then the descriptions, so
-no line ever wraps. Closing a tunnel leaves no `^C` on screen, because tuna
+no line ever wraps. Closing a tunnel leaves no `^C` on screen, because tunny
 clears the terminal flag that echoes it and puts it back on the way out.
 
-`tuna --preview` prints the list without opening anything, and takes a width so
-you can check the layout at a size you do not own: `tuna --preview 60`.
+`tunny --preview` prints the list without opening anything, and takes a width so
+you can check the layout at a size you do not own: `tunny --preview 60`.
 
-## What tuna does not do
+## What tunny does not do
 
 | Not here                                        | When to reconsider                                                                                                                                                     |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A generic `tuna ip port`                        | Never, absent proof otherwise. That is `ssh -N -L 8200:10.0.0.5:8200 my-host` typed by hand, and an ad-hoc form would cost an argument parser to save twenty characters. |
-| Opening the browser                             | The day it genuinely grates. tuna prints the URL and your terminal makes it clickable, and the choice turns ambiguous the moment a destination has two forwards.        |
+| A generic `tunny ip port`                        | Never, absent proof otherwise. That is `ssh -N -L 8200:10.0.0.5:8200 my-host` typed by hand, and an ad-hoc form would cost an argument parser to save twenty characters. |
+| Opening the browser                             | The day it genuinely grates. tunny prints the URL and your terminal makes it clickable, and the choice turns ambiguous the moment a destination has two forwards.        |
 | Several tunnels at once, a daemon, `stop`, logs | When several terminal tabs become a nuisance. The cost sits after the launching: PIDs, a state file, orphans after a crash, and logs to store and to read.              |
 | Mesh URLs, interactive ssh                      | Neither needs help. Mesh URLs already open in a browser, and `ssh hypervisor` types fine on its own.                                                                    |
 
 ## License
 
-[GPL-3.0](LICENSE).
+[GPL-3.0-only](LICENSE), and only: this project grants no "or any later
+version" permission.
+
+Copyright (C) 2026 Morgan Kryze <contact@libresoftware.cloud>

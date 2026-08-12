@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Morgan Kryze <contact@libresoftware.cloud>
+# SPDX-License-Identifier: GPL-3.0-only
 # Regenerates the badge SVGs and publishes them to the orphan `badges` branch,
 # from which the README serves them. Fully self-hosted: no third-party badge
 # service, nothing about the repo leaves the repo.

@@ -1,4 +1,4 @@
-module github.com/MorganKryze/tuna
+module github.com/MorganKryze/tunny
 
 go 1.25.0
 
