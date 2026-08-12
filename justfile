@@ -9,6 +9,11 @@ build:
 test:
     go test ./...
 
+# The race detector. Cheap, and it only means something now that the tests
+# drive a real child process.
+race:
+    go test -race ./...
+
 coverage:
     go test -covermode=atomic -coverprofile=cov.out ./...
     go tool cover -func=cov.out | tail -1

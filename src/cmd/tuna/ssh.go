@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
 	"syscall"
 	"time"
@@ -26,23 +26,34 @@ var sshPath = "ssh"
 // signals. It reports how long ssh lived and how it ended; tunnel.Connect
 // decides what that means. Keeping the two apart is what lets the whole
 // reconnection policy be tested without spawning anything.
-func sshRunner(d *config.Destination, up func()) tunnel.Result {
-	cmd := exec.Command(sshPath, tunnel.SSHArgs(d)...)
+func sshRunner(ctx context.Context, d *config.Destination, up func()) tunnel.Result {
+	cmd := exec.CommandContext(ctx, sshPath, tunnel.SSHArgs(d)...)
 	cmd.Stdin = os.Stdin // the host-key prompt and any passphrase need the TTY
 	cmd.Stdout = os.Stdout
+
+	// What a cancelled context does to the child. Without this, a SIGTERM to
+	// tuna killed tuna alone: ssh was reparented to init and kept holding the
+	// forwarded ports, so the next run reported them busy and told the
+	// operator to go find the culprit with lsof. The culprit was tuna's own
+	// child.
+	//
+	// SIGTERM to the process rather than to the group, on purpose. Putting ssh
+	// in its own group would stop the terminal's own Ctrl-C from reaching it,
+	// and would make it a background group that cannot read the TTY — which is
+	// where the host-key prompt and any passphrase have to arrive.
+	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+
+	// A -J destination runs a ProxyCommand child that inherits this stderr
+	// pipe, and Wait does not return until every writer has closed it. A
+	// grandchild outliving its parent would hang tuna with no output and no
+	// way out. WaitDelay gives up on the pipe instead of on the program.
+	cmd.WaitDelay = 3 * time.Second
 
 	// stderr is both shown and read: shown because ssh's own words are the
 	// best diagnostic there is, read because three of them mean retrying is
 	// pointless.
 	var captured strings.Builder
 	cmd.Stderr = &teeWriter{to: os.Stderr, into: &captured}
-
-	// Notify keeps Go from killing us on Ctrl-C before we can report it.
-	// ssh gets the same SIGINT — it is in the same foreground group — so it
-	// dies on its own; we only need to know it was deliberate.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	defer signal.Stop(sig)
 
 	start := time.Now()
 
@@ -67,18 +78,13 @@ func sshRunner(d *config.Destination, up func()) tunnel.Result {
 	err := cmd.Wait()
 	lived := time.Since(start)
 
+	// Two ways to learn it was deliberate, and both are needed. The context
+	// covers a signal tuna received; signaled() covers the terminal delivering
+	// Ctrl-C straight to the foreground group, where ssh dies before tuna has
+	// looked at anything.
 	outcome := tunnel.OutcomeFailed
-	if signaled(err) {
+	if ctx.Err() != nil || signaled(err) {
 		outcome = tunnel.OutcomeInterrupted
-	} else {
-		select {
-		case <-sig:
-			// ssh exited on its own account, but a SIGINT is waiting: the
-			// operator asked to stop between the two, and relaunching now
-			// would be the exact bug this program must not have.
-			outcome = tunnel.OutcomeInterrupted
-		default:
-		}
 	}
 	return tunnel.Result{Lived: lived, Stderr: captured.String(), Outcome: outcome}
 }

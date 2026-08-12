@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -15,19 +16,19 @@ type fake struct {
 	calls  int
 }
 
-func (f *fake) run(*config.Destination, func()) Result {
+func (f *fake) run(context.Context, *config.Destination, func()) Result {
 	r := f.script[min(f.calls, len(f.script)-1)]
 	f.calls++
 	return r
 }
 
 func testRetry() Retry {
-	return Retry{Max: 3, StableAfter: 30 * time.Second, Sleep: func(time.Duration) {}}
+	return Retry{Max: 3, StableAfter: 30 * time.Second, Wait: func(context.Context, time.Duration) error { return nil }}
 }
 
 func TestGivesUpAfterThreeQuickFailures(t *testing.T) {
 	f := &fake{script: []Result{{Lived: 2 * time.Second, Outcome: OutcomeFailed}}}
-	if err := Connect(&config.Destination{Name: "a"}, f.run, testRetry()); err == nil {
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry()); err == nil {
 		t.Fatal("three quick failures have to end in giving up")
 	}
 	// One initial attempt plus three retries.
@@ -49,7 +50,7 @@ func TestAStableTunnelResetsTheCounter(t *testing.T) {
 		{Lived: 2 * time.Second, Outcome: OutcomeFailed},
 		{Lived: 2 * time.Second, Outcome: OutcomeFailed},
 	}}
-	if err := Connect(&config.Destination{Name: "a"}, f.run, testRetry()); err == nil {
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry()); err == nil {
 		t.Fatal("three quick failures after the recoveries have to give up")
 	}
 	// Five held attempts, then three quick ones. Not four: the fifth reset
@@ -73,7 +74,7 @@ func TestExactlyStableAfterCounts(t *testing.T) {
 		{Lived: 30 * time.Second, Outcome: OutcomeFailed},
 		{Lived: 2 * time.Second, Outcome: OutcomeFailed},
 	}}
-	_ = Connect(&config.Destination{Name: "a"}, f.run, testRetry())
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry())
 	if f.calls != 6 {
 		t.Fatalf("exactly 30s has to reset the counter: want 6 launches, got %d", f.calls)
 	}
@@ -83,7 +84,7 @@ func TestExactlyStableAfterCounts(t *testing.T) {
 // "roughly thirty seconds" and drift on the next edit.
 func TestJustUnderStableAfterDoesNotCount(t *testing.T) {
 	f := &fake{script: []Result{{Lived: 30*time.Second - time.Millisecond, Outcome: OutcomeFailed}}}
-	_ = Connect(&config.Destination{Name: "a"}, f.run, testRetry())
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry())
 	if f.calls != 4 {
 		t.Fatalf("29.999s must reset nothing: want 4 launches, got %d", f.calls)
 	}
@@ -91,7 +92,7 @@ func TestJustUnderStableAfterDoesNotCount(t *testing.T) {
 
 func TestCtrlCNeverRelaunches(t *testing.T) {
 	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeInterrupted}}}
-	if err := Connect(&config.Destination{Name: "a"}, f.run, testRetry()); err != nil {
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry()); err != nil {
 		t.Fatalf("a deliberate close is not an error: %v", err)
 	}
 	if f.calls != 1 {
@@ -107,7 +108,7 @@ func TestCtrlCWinsOverAHopelessStderr(t *testing.T) {
 		Stderr:  "bind [127.0.0.1]:8200: Address already in use",
 		Outcome: OutcomeInterrupted,
 	}}}
-	if err := Connect(&config.Destination{Name: "a"}, f.run, testRetry()); err != nil {
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry()); err != nil {
 		t.Fatalf("Ctrl-C has to win and return without an error, got: %v", err)
 	}
 	if f.calls != 1 {
@@ -124,7 +125,7 @@ func TestHopelessFailuresGiveUpAtOnce(t *testing.T) {
 	for stderr, want := range cases {
 		t.Run(want, func(t *testing.T) {
 			f := &fake{script: []Result{{Lived: time.Second, Stderr: stderr, Outcome: OutcomeFailed}}}
-			err := Connect(&config.Destination{Name: "a"}, f.run, testRetry())
+			err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry())
 			if err == nil {
 				t.Fatal("a hopeless failure has to be an error")
 			}
@@ -146,7 +147,7 @@ func TestARetryableFailureUsesEveryAttempt(t *testing.T) {
 		Stderr:  "ssh: connect to host mon-hote port 22: Connection refused",
 		Outcome: OutcomeFailed,
 	}}}
-	if err := Connect(&config.Destination{Name: "a"}, f.run, testRetry()); err == nil {
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, testRetry()); err == nil {
 		t.Fatal("the failure has to surface in the end")
 	}
 	if f.calls != 4 {
@@ -159,7 +160,7 @@ func TestNoRetryStillConnectsOnce(t *testing.T) {
 	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
 	r := testRetry()
 	r.Max = 0
-	err := Connect(&config.Destination{Name: "a"}, f.run, r)
+	err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r)
 	if err == nil {
 		t.Fatal("the failure has to surface")
 	}
@@ -178,7 +179,7 @@ func TestNoRetryHonoursCtrlC(t *testing.T) {
 	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeInterrupted}}}
 	r := testRetry()
 	r.Max = 0
-	if err := Connect(&config.Destination{Name: "a"}, f.run, r); err != nil {
+	if err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r); err != nil {
 		t.Fatalf("Ctrl-C is not an error, reconnection or not: %v", err)
 	}
 }
@@ -187,8 +188,8 @@ func TestBackoffGrows(t *testing.T) {
 	var slept []time.Duration
 	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
 	r := testRetry()
-	r.Sleep = func(d time.Duration) { slept = append(slept, d) }
-	_ = Connect(&config.Destination{Name: "a"}, f.run, r)
+	r.Wait = func(_ context.Context, d time.Duration) error { slept = append(slept, d); return nil }
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r)
 
 	want := []time.Duration{time.Second, 2 * time.Second, 4 * time.Second}
 	if len(slept) != len(want) {
@@ -211,8 +212,8 @@ func TestDefaultRetryIsWhatTheReadmeSays(t *testing.T) {
 	if r.StableAfter != 30*time.Second {
 		t.Errorf("want 30s of stability, got %v", r.StableAfter)
 	}
-	if r.Sleep == nil {
-		t.Error("the default Sleep must not be nil: Connect calls it without checking")
+	if r.Wait == nil {
+		t.Error("the default Wait must not be nil: Connect calls it without checking")
 	}
 }
 
@@ -226,9 +227,9 @@ func TestOnUpTellsAFirstStartFromAComeback(t *testing.T) {
 	r.OnUp = func(reconnected bool) { seen = append(seen, reconnected) }
 
 	// Every launch reports; only the first is not a reconnection.
-	_ = Connect(&config.Destination{Name: "a"}, func(d *config.Destination, up func()) Result {
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, func(ctx context.Context, d *config.Destination, up func()) Result {
 		up()
-		return f.run(d, up)
+		return f.run(ctx, d, up)
 	}, r)
 
 	if want := []bool{false, true, true, true}; len(seen) != len(want) {
@@ -249,14 +250,14 @@ func TestOnUpIsOnlyCalledByTheRunner(t *testing.T) {
 	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
 	r := testRetry()
 	r.OnUp = func(bool) { called = true }
-	_ = Connect(&config.Destination{Name: "a"}, f.run, r)
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r)
 	if called {
 		t.Error("a runner that never calls up must announce nothing")
 	}
 
 	r.OnUp = nil
-	_ = Connect(&config.Destination{Name: "a"}, func(d *config.Destination, up func()) Result {
+	_ = Connect(t.Context(), &config.Destination{Name: "a"}, func(ctx context.Context, d *config.Destination, up func()) Result {
 		up() // nil OnUp: the closure Connect passes has to absorb this
-		return f.run(d, up)
+		return f.run(ctx, d, up)
 	}, r)
 }

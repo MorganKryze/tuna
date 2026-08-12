@@ -9,6 +9,7 @@
 package tunnel
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -36,12 +37,21 @@ type Result struct {
 // Runner launches the tunnel and blocks until it dies. It calls up once the
 // tunnel looks established, which is the only moment Connect cannot observe
 // for itself: it is inside run() for the whole life of the process.
-type Runner func(d *config.Destination, up func()) Result
+//
+// The context is how the operator gets out. A cancelled context means stop,
+// whether that came from Ctrl-C, a SIGTERM from a service manager, or a
+// terminal that went away; the Runner is expected to take its child down with
+// it rather than leave one behind.
+type Runner func(ctx context.Context, d *config.Destination, up func()) Result
 
 type Retry struct {
 	Max         int           // reconnection attempts per episode
 	StableAfter time.Duration // held this long = the episode is over
-	Sleep       func(time.Duration)
+	// Wait sits out the backoff and returns non-nil if it was cut short. It
+	// takes a context because most of a failing episode is spent in here —
+	// seven of the ten seconds of three attempts — and "it is retrying and I
+	// want it to stop" is exactly when somebody reaches for Ctrl-C.
+	Wait func(context.Context, time.Duration) error
 	// Notify is told about each retry before it is waited out, and OnUp when
 	// the tunnel comes up — with reconnected set when it is coming back
 	// rather than starting. ssh says nothing either way, so without these a
@@ -52,7 +62,18 @@ type Retry struct {
 }
 
 func DefaultRetry() Retry {
-	return Retry{Max: 3, StableAfter: 30 * time.Second, Sleep: time.Sleep}
+	return Retry{Max: 3, StableAfter: 30 * time.Second, Wait: wait}
+}
+
+func wait(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
 }
 
 func backoff(attempt int) time.Duration {
@@ -61,18 +82,22 @@ func backoff(attempt int) time.Duration {
 
 // Connect runs the tunnel and keeps it up. It returns nil when the operator
 // closed it, and an error when it gave up.
-func Connect(d *config.Destination, run Runner, r Retry) error {
+func Connect(ctx context.Context, d *config.Destination, run Runner, r Retry) error {
 	attempts, launches := 0, 0
 	for {
 		reconnected := launches > 0
-		res := run(d, func() {
+		res := run(ctx, d, func() {
 			if r.OnUp != nil {
 				r.OnUp(reconnected)
 			}
 		})
 		launches++
 
-		if res.Outcome == OutcomeInterrupted {
+		// The context is checked first and on its own. It is the one signal
+		// that covers every way of asking tuna to stop, including the ones no
+		// exit code can express: a SIGTERM while ssh was healthy, or a Ctrl-C
+		// that landed during the backoff rather than during an attempt.
+		if ctx.Err() != nil || res.Outcome == OutcomeInterrupted {
 			return nil
 		}
 		// Held long enough to count as a working tunnel: whatever just
@@ -94,10 +119,12 @@ func Connect(d *config.Destination, run Runner, r Retry) error {
 			}
 			return fmt.Errorf("%s: gave up after %d reconnection attempts", d.Name, r.Max)
 		}
-		wait := backoff(attempts)
+		pause := backoff(attempts)
 		if r.Notify != nil {
-			r.Notify(attempts, r.Max, wait)
+			r.Notify(attempts, r.Max, pause)
 		}
-		r.Sleep(wait)
+		if err := r.Wait(ctx, pause); err != nil {
+			return nil // cut short on purpose, which is not a failure
+		}
 	}
 }

@@ -8,14 +8,17 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/term"
@@ -85,7 +88,15 @@ Config: %s
 		return
 	}
 
-	if err := launch(flag.Arg(0), *noRetry); err != nil {
+	// One place owns "the operator wants out", and it covers every way of
+	// saying it. SIGINT is Ctrl-C; SIGTERM is a service manager or a pkill;
+	// SIGHUP is the terminal going away. Before this, only SIGINT was heard,
+	// and only while ssh was actually running.
+	ctx, stop := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	defer stop()
+
+	if err := launch(ctx, flag.Arg(0), *noRetry); err != nil {
 		if errors.Is(err, pick.ErrNoChoice) {
 			return // Escape is not a failure
 		}
@@ -120,7 +131,7 @@ func showPreview() error {
 	return nil
 }
 
-func launch(name string, noRetry bool) error {
+func launch(ctx context.Context, name string, noRetry bool) error {
 	// Before anything is printed. Without this, a missing ssh spends seven
 	// seconds on three retries and blames the network, and the real error is
 	// thrown away with the attempt that produced it. Whether ssh is on PATH is
@@ -140,7 +151,7 @@ func launch(name string, noRetry bool) error {
 		// The picker receives a list already in order: it does not sort, and
 		// recent does not know the picker exists.
 		ordered := recent.Order(cfg.Destination, recent.Load(statePath))
-		if name, err = pick.Pick(ordered, port.BusyIn(ordered)); err != nil {
+		if name, err = pick.Pick(ctx, ordered, port.BusyIn(ordered)); err != nil {
 			return err
 		}
 	}
@@ -192,7 +203,7 @@ func launch(name string, noRetry bool) error {
 		fmt.Fprint(os.Stderr, established(color))
 	}
 
-	if err := tunnel.Connect(dest, sshRunner, retry); err != nil {
+	if err := tunnel.Connect(ctx, dest, sshRunner, retry); err != nil {
 		return err
 	}
 	// Silence used to be the only sign that tuna had stopped rather than

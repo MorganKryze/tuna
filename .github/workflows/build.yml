@@ -47,7 +47,7 @@ jobs:
           # One run, two numbers. -json is what makes the count possible, so
           # the human output is rebuilt from the same file when it fails:
           # otherwise a red build shows a wall of JSON and nothing readable.
-          if ! go test -covermode=atomic -coverpkg=./src/... \
+          if ! go test -race -covermode=atomic -coverpkg=./src/... \
             -coverprofile=cov.out -json ./src/... > tests.json; then
             jq -r 'select(.Action == "output") | .Output' tests.json | tail -60
             exit 1

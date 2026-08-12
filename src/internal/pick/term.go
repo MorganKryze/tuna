@@ -1,6 +1,7 @@
 package pick
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -22,7 +23,7 @@ var ErrNoChoice = errors.New("no destination chosen")
 //
 // The drawing goes to stderr rather than stdout, so tuna stays usable in a
 // pipe without the menu ending up in the data.
-func Pick(dests []config.Destination, busy map[string][]int) (string, error) {
+func Pick(ctx context.Context, dests []config.Destination, busy map[string][]int) (string, error) {
 	tty := os.Stdin
 	if !term.IsTerminal(int(tty.Fd())) {
 		return "", errors.New("not a terminal: pass the destination name as an argument")
@@ -35,10 +36,30 @@ func Pick(dests []config.Destination, busy map[string][]int) (string, error) {
 	// shell that follows has no echo and no line editing.
 	defer term.Restore(int(tty.Fd()), state)
 
+	// A signal is not a keystroke, and tty.Read blocks until one arrives. The
+	// read happens in its own goroutine so the loop can watch the context too:
+	// without it, a SIGTERM while the list is open leaves tuna waiting for a
+	// key that will never come, holding a terminal in raw mode.
+	//
+	// The goroutine outlives this function, parked in a read nobody will
+	// answer. That is deliberate: it happens once, on the way out of the
+	// program, and closing the terminal underneath it would be worse.
+	keys, readErr := make(chan []byte), make(chan error, 1)
+	go func() {
+		for {
+			buf := make([]byte, 8)
+			n, err := tty.Read(buf)
+			if err != nil {
+				readErr <- err
+				return
+			}
+			keys <- buf[:n]
+		}
+	}()
+
 	out := os.Stderr
 	color := ui.ColorOK(out)
 	p := Picker{All: dests, Busy: busy}
-	buf := make([]byte, 8)
 	for {
 		// Re-read the size every frame: a window resized mid-pick would
 		// otherwise keep drawing to the width it had when it started.
@@ -46,16 +67,23 @@ func Pick(dests []config.Destination, busy map[string][]int) (string, error) {
 		frame := p.Frame(width, height, color)
 		fmt.Fprint(out, hideCursor+frame+showCursor)
 
-		n, err := tty.Read(buf)
-		if err != nil {
+		var buf []byte
+		select {
+		case <-ctx.Done():
+			windBack(out, Lines(frame))
+			// Asking tuna to stop is not a failure, and it is not a choice
+			// either. The caller treats both the same way.
+			return "", ErrNoChoice
+		case err := <-readErr:
 			windBack(out, Lines(frame))
 			return "", err
+		case buf = <-keys:
 		}
 		// Wind back the frame that is on screen, before the keystroke can
 		// change how tall the next one is.
 		windBack(out, Lines(frame))
 
-		k, r := readKey(buf[:n])
+		k, r := readKey(buf)
 		next, chosen, done := p.Update(k, r)
 		p = next
 		if done {
