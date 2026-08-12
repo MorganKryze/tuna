@@ -74,7 +74,13 @@ tunny --preview    # what the list looks like, without opening anything
 ```
 
 There is no `tunny add`, because the config is a file and a file belongs in an
-editor. There is no `tunny list` either: the picker is the list.
+editor. There is no `tunny list` either: the picker is the list. (`--list`
+exists, printing one name per line, but it is there for the shell completions
+rather than for you.)
+
+Shell completions live in [`completions/`](completions), and complete
+destination names by asking tunny rather than by parsing your config a second
+time. A man page is in [`docs/tunny.1`](docs/tunny.1).
 
 ## What a session looks like
 
@@ -278,6 +284,12 @@ and the error carries the `mv` command that moves your config across.
 | Opening the browser                             | The day it genuinely grates. tunny prints the URL and your terminal makes it clickable, and the choice turns ambiguous the moment a destination has two forwards.        |
 | Several tunnels at once, a daemon, `stop`, logs | When several terminal tabs become a nuisance. The cost sits after the launching: PIDs, a state file, orphans after a crash, and logs to store and to read.              |
 | Mesh URLs, interactive ssh                      | Neither needs help. Mesh URLs already open in a browser, and `ssh hypervisor` types fine on its own.                                                                    |
+
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) has the dev loop and the ground rules,
+[PACKAGING.md](PACKAGING.md) has everything a distribution maintainer needs,
+and [CHANGELOG.md](CHANGELOG.md) has what changed and when.
 
 ## License
 

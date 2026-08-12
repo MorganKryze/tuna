@@ -61,6 +61,7 @@ func main() {
 	noRetry := flag.Bool("no-retry", false, "one attempt, no reconnection")
 	preview := flag.Bool("preview", false, "print the list without opening anything, then exit")
 	showVersion := flag.Bool("version", false, "print the version and exit")
+	list := flag.Bool("list", false, "print destination names, one per line, for shell completion")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `tunny %s — open an admin SSH tunnel.
 
@@ -80,6 +81,21 @@ Config: %s
 	// Debian's autopkgtest, the AUR check(). Decorating it costs them a regex.
 	if *showVersion {
 		fmt.Println(buildVersion())
+		return
+	}
+
+	// Names only, one per line, nothing else. There is deliberately no
+	// human-facing `tunny list` — the picker is the list — but a shell
+	// completing an argument is not a human, and the alternative is a second
+	// TOML parser living in three shell scripts.
+	if *list {
+		cfg, err := config.Load(config.Path())
+		if err != nil {
+			os.Exit(1) // a shell completing a name has no use for the reason
+		}
+		for _, n := range cfg.Names() {
+			fmt.Println(n)
+		}
 		return
 	}
 

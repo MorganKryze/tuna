@@ -34,6 +34,8 @@ internal/
   port/         is this local port already taken?
   ui/           escape codes, when colour is allowed, column-aware padding,
                 and the one termios flag tunny clears
+completions/    bash, zsh and fish, completing names via `tunny --list`
+docs/tunny.1    the man page
 scripts/shot.py the README's picture and the social card, redrawn from the
                 real output
 githooks/       pre-commit, installed by `just hooks`
@@ -115,7 +117,7 @@ which is why the entire reconnection policy is tested in microseconds.
   has to be uploaded by hand, under Settings → Social preview: GitHub has no
   API for it and will not take the SVG.
 - **Say it before it fails, not after.** Anything knowable without launching
-  ssh is shown in the picker and refused at launch — a local port already
+  ssh is shown in the picker and refused at launch. A local port already
   taken is the case that exists today. A diagnostic that arrives after a
   banner has promised a tunnel is a diagnostic that arrived too late.
 - **Config errors are product.** Anything you can get wrong in the TOML must

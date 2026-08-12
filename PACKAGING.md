@@ -59,6 +59,10 @@ as the way to find what holds a busy port. Arch `optdepends`, Debian
 | `/usr/bin/tunny` | the binary |
 | `/usr/share/doc/tunny/examples/destinations.example.toml` | the starting config |
 | `/usr/share/licenses/tunny/LICENSE` (Arch) | GPL-3.0-only |
+| `/usr/share/man/man1/tunny.1` | from `docs/tunny.1` |
+| `/usr/share/bash-completion/completions/tunny` | from `completions/tunny.bash` |
+| `/usr/share/zsh/site-functions/_tunny` | from `completions/tunny.zsh` |
+| `/usr/share/fish/vendor_completions.d/tunny.fish` | from `completions/tunny.fish` |
 | `~/.config/tunny/destinations.toml` | user config, honours `XDG_CONFIG_HOME` |
 | `~/.local/state/tunny/recent` | user state, honours `XDG_STATE_HOME`, mode 0600 |
 
@@ -96,7 +100,7 @@ and a build is fully offline once the module cache is populated.
 `LICENSE` text is the licence, and no per-file notice offers the option. Every
 source file carries an `SPDX-License-Identifier`.
 
-Copyright (C) 2026 Morgan Kryze &lt;contact@libresoftware.cloud&gt;
+Copyright (C) 2026 Morgan Kryze `<contact@libresoftware.cloud>`
 
 ## Verifying a release
 

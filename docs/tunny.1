@@ -1,0 +1,174 @@
+.\" SPDX-FileCopyrightText: 2026 Morgan Kryze <contact@libresoftware.cloud>
+.\" SPDX-License-Identifier: GPL-3.0-only
+.TH TUNNY 1 "2026-08-12" "tunny" "User Commands"
+
+.SH NAME
+tunny \- open an admin SSH tunnel chosen from a list
+
+.SH SYNOPSIS
+.B tunny
+.RI [ name ]
+.RB [ \-\-no\-retry ]
+.br
+.B tunny \-\-preview
+.RI [ width ]
+.br
+.B tunny \-\-version
+
+.SH DESCRIPTION
+.B tunny
+opens an
+.BR ssh (1)
+port forward that you pick from a list rather than remember the name of, and
+brings it back when the network drops.
+.PP
+With no argument it draws a picker: type to filter on the name and the
+description at once, arrows to move, Enter to open, Escape to give up. The
+destination you used last is on top. With a name, it goes straight there and
+never draws anything.
+.PP
+The tunnel runs in the foreground and Ctrl\-C closes it.
+.B tunny
+never reimplements SSH: it builds an argument list and executes the real
+.BR ssh (1)
+binary, so aliases, ProxyJump, the agent, known_hosts and the host\-key prompt
+all keep working the way you configured them.
+
+.SH OPTIONS
+.TP
+.B \-\-no\-retry
+One attempt. Do not relaunch if the tunnel drops.
+.TP
+.BI \-\-preview " width"
+Print what the picker would show and exit, without opening anything or writing
+any state. An optional width, at least 20, draws the layout at a size other
+than this terminal's.
+.TP
+.B \-\-version
+Print the version on standard output and exit.
+.TP
+.B \-h ", " \-\-help
+Print a usage summary on standard error and exit.
+
+.SH RECONNECTION
+Three attempts per outage, waiting 1, 2 and 4 seconds.
+.PP
+A tunnel that held for thirty seconds resets the counter, so the count is per
+outage rather than per session: one left open all day survives five network
+changes, while a destination that is genuinely down gives up in three quick
+tries.
+.PP
+Ctrl\-C never relaunches.
+.B tunny
+catches the interrupt itself rather than reading ssh's exit code, and takes the
+ssh child down with it on SIGINT, SIGTERM and SIGHUP alike.
+.PP
+Two failures skip the retries and hand you ssh's own words, since both would
+fail identically three times over:
+.I Permission denied
+and
+.IR "Could not resolve hostname" .
+A third, a local port already taken, never reaches ssh at all:
+.B tunny
+binds the port first, marks the destination in the picker, and refuses at
+launch with the command that names what holds it.
+
+.SH FILES
+.TP
+.I ~/.config/tunny/destinations.toml
+The destinations. Honours
+.BR XDG_CONFIG_HOME .
+See
+.B EXAMPLE
+below.
+.TP
+.I ~/.local/state/tunny/recent
+The recency order, one name per line, most recent first, mode 0600. Honours
+.BR XDG_STATE_HOME .
+Names no longer in the config are dropped when it is read.
+
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+Set to any value, empty included, switches colour off.
+.TP
+.B CLICOLOR_FORCE
+Anything but
+.I 0
+keeps colour through a pipe.
+.B NO_COLOR
+still wins over it.
+.TP
+.B TERM
+.I dumb
+switches colour off.
+
+.SH EXIT STATUS
+.TP
+.B 0
+The tunnel was closed on purpose. Also Escape in the picker, and
+.B \-\-version
+and
+.BR \-\-preview .
+.TP
+.B 1
+Anything that failed: no config, unknown destination, local port taken, ssh
+gave up.
+.TP
+.B 2
+An unrecognised flag.
+
+.SH EXAMPLE
+.PP
+A destination is one ssh invocation, with as many forwards as there are UIs
+behind it:
+.PP
+.EX
+[[destination]]
+name = "hypervisor"
+desc = "Cockpit and the orchestrator"
+host = "my-host"
+forward = [
+  { local = 9090, to = "127.0.0.1:9090", label = "Cockpit" },
+  { local = 9120, to = "10.0.0.5:9120", label = "Komodo" },
+]
+.EE
+.PP
+.I host
+is an alias from
+.IR ~/.ssh/config ,
+which already carries the user, the port and the key. The optional
+.I port
+and
+.I jump
+fields become
+.B \-p
+and
+.BR \-J ,
+for what the alias does not cover.
+.PP
+.B tunny
+validates the file before it does anything: unique names, at least one forward,
+ports in range, a host:port on the far side. A key it does not know is an error
+too, since
+.I forwards
+instead of
+.I forward
+would otherwise leave a destination with no tunnel and no complaint.
+
+.SH REQUIREMENTS
+An OpenSSH client on
+.BR PATH .
+.B tunny
+checks for it before printing anything.
+
+.SH SEE ALSO
+.BR ssh (1),
+.BR ssh_config (5),
+.BR lsof (8)
+.PP
+.UR https://github.com/MorganKryze/tunny
+.UE
+
+.SH LICENSE
+GPL\-3.0\-only. Copyright (C) 2026 Morgan Kryze <contact@libresoftware.cloud>
