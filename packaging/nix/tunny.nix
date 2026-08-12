@@ -43,10 +43,11 @@ buildGoModule (finalAttrs: {
   postInstall = ''
     wrapProgram $out/bin/tunny --prefix PATH : ${lib.makeBinPath [ openssh ]}
     installManPage docs/tunny.1
-    installShellCompletion \
-      --bash completions/tunny.bash \
-      --zsh completions/tunny.zsh \
-      --fish completions/tunny.fish
+    # --name on each, or the files keep their own names and bash-completion
+    # never autoloads them: it looks them up by command name.
+    installShellCompletion --bash --name tunny completions/tunny.bash
+    installShellCompletion --zsh --name _tunny completions/tunny.zsh
+    installShellCompletion --fish --name tunny.fish completions/tunny.fish
     install -Dm644 destinations.example.toml \
       $out/share/doc/tunny/examples/destinations.example.toml
   '';

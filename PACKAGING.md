@@ -115,6 +115,20 @@ gh attestation verify tunny-linux-amd64 --repo MorganKryze/tunny
 Source tarballs are GitHub's own for the tag. Two builds of the same tarball
 are byte-identical.
 
+## Starting points
+
+`packaging/` holds a working recipe for each ecosystem, kept next to the code
+so they move with it:
+
+| File | State |
+| --- | --- |
+| `packaging/homebrew/tunny.rb` | formula for a tap. Its `install` and `test do` blocks were run by hand against the v0.2.0 tarball. |
+| `packaging/aur/PKGBUILD` | its `build()` and `check()` were run; `makepkg` itself was not, for want of an Arch machine. |
+| `packaging/nix/tunny.nix` | built with `nix-build` end to end: binary, man page, three completions, example config, and the openssh wrapper. |
+
+Both hashes in the Nix file are real and were taken from a build. Bump them
+with the version.
+
 ## Smoke test
 
 ```sh
