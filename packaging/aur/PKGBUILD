@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2026 Morgan Kryze <contact@libresoftware.cloud>
+# SPDX-License-Identifier: GPL-3.0-only
+# Maintainer: Morgan Kryze <contact@libresoftware.cloud>
+pkgname=tunny
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Pick your admin SSH tunnel from a list instead of remembering its name"
+arch=('x86_64' 'aarch64')
+url="https://github.com/MorganKryze/tunny"
+license=('GPL-3.0-only')
+depends=('openssh' 'glibc')
+makedepends=('go')
+optdepends=('lsof: name what holds a busy local port')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('58856f37da835f0a9a8a38090fa0061e8cea9e8b0969cd220d571174e8067c46')
+
+build() {
+  cd "$pkgname-$pkgver"
+  # Arch's standard Go environment: PIE through external linking, which is why
+  # cgo stays on even though tunny itself uses none.
+  export CGO_CPPFLAGS="${CPPFLAGS}"
+  export CGO_CFLAGS="${CFLAGS}"
+  export CGO_CXXFLAGS="${CXXFLAGS}"
+  export CGO_LDFLAGS="${LDFLAGS}"
+  export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw -buildvcs=false"
+  # -X is not optional: a tarball carries no VCS metadata, so without it the
+  # binary reports "dev".
+  go build -ldflags "-linkmode=external -X main.version=v$pkgver" -o "$pkgname" ./cmd/tunny
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  # Needs no network, no TTY and no ssh server.
+  go test ./...
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 "$pkgname"                  "$pkgdir/usr/bin/$pkgname"
+  install -Dm644 docs/tunny.1                "$pkgdir/usr/share/man/man1/$pkgname.1"
+  install -Dm644 completions/tunny.bash      "$pkgdir/usr/share/bash-completion/completions/$pkgname"
+  install -Dm644 completions/tunny.zsh       "$pkgdir/usr/share/zsh/site-functions/_$pkgname"
+  install -Dm644 completions/tunny.fish      "$pkgdir/usr/share/fish/vendor_completions.d/$pkgname.fish"
+  install -Dm644 destinations.example.toml   "$pkgdir/usr/share/doc/$pkgname/examples/destinations.example.toml"
+  install -Dm644 LICENSE                     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

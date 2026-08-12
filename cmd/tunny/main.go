@@ -155,15 +155,6 @@ func showPreview() error {
 }
 
 func launch(ctx context.Context, name string, noRetry bool) error {
-	// Before anything is printed. Without this, a missing ssh spends seven
-	// seconds on three retries and blames the network, and the real error is
-	// thrown away with the attempt that produced it. Whether ssh is on PATH is
-	// knowable without launching it, and this project's own rule is to say a
-	// thing before it fails rather than after.
-	if _, err := exec.LookPath(sshPath); err != nil {
-		return fmt.Errorf("%s is not on your PATH; install an OpenSSH client", sshPath)
-	}
-
 	cfg, err := config.Load(config.Path())
 	if err != nil {
 		return err
@@ -182,6 +173,16 @@ func launch(ctx context.Context, name string, noRetry bool) error {
 	dest, ok := cfg.Find(name)
 	if !ok {
 		return fmt.Errorf("unknown destination %q; known: %s", name, strings.Join(cfg.Names(), ", "))
+	}
+
+	// After the request has been understood and before anything is printed.
+	// Without it, a missing ssh spends seven seconds on three retries and
+	// blames the network, while the real error is thrown away with the attempt
+	// that produced it. Later than the name check on purpose: a typo in the
+	// destination is the more immediate mistake, and it deserves its own
+	// message even on a machine with no ssh at all.
+	if _, err := exec.LookPath(sshPath); err != nil {
+		return fmt.Errorf("%s is not on your PATH; install an OpenSSH client", sshPath)
 	}
 
 	// Checked before the banner and before ssh, because ssh finding out is
