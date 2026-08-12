@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Morgan Kryze <contact@libresoftware.cloud>
 // SPDX-License-Identifier: GPL-3.0-only
 
+// The terminal handling is Unix-only, and says so here rather than failing
+// with a page of undefined symbols from x/sys/unix on a platform that has no
+// termios at all.
+//go:build unix
+
 package ui
 
 import (

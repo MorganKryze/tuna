@@ -39,6 +39,18 @@ Or take a binary from the [Releases](https://github.com/MorganKryze/tunny/releas
 page: darwin and linux, amd64 and arm64, with a `SHA256SUMS` and a build
 attestation next to them.
 
+## Requirements
+
+An **OpenSSH client on your `PATH`**. tunny builds an argument list and runs
+`ssh`; it implements no SSH of its own, which is why your `~/.ssh/config`,
+your agent and your `known_hosts` keep working untouched. tunny checks for it
+before printing anything and says so plainly if it is missing.
+
+**macOS or Linux**, and FreeBSD, NetBSD and OpenBSD build and pass their tests
+too. Not Windows: the terminal handling has no equivalent there.
+
+**Go 1.25 or newer**, for `go install` only. A release binary needs nothing.
+
 ## Getting started
 
 ```sh
@@ -201,6 +213,62 @@ clears the terminal flag that echoes it and puts it back on the way out.
 
 `tunny --preview` prints the list without opening anything, and takes a width so
 you can check the layout at a size you do not own: `tunny --preview 60`.
+
+## Files, environment and exit codes
+
+| Path | What |
+| --- | --- |
+| `~/.config/tunny/destinations.toml` | your destinations. `XDG_CONFIG_HOME` moves it. |
+| `~/.local/state/tunny/recent` | the recency order, one name per line, mode 0600. `XDG_STATE_HOME` moves it. |
+
+tunny writes nothing else, anywhere. It listens on nothing and opens no
+connection of its own: the only network traffic is `ssh`'s.
+
+| Variable | Effect |
+| --- | --- |
+| `NO_COLOR` | any value, even empty, switches colour off |
+| `CLICOLOR_FORCE` | anything but `0` keeps colour through a pipe. `NO_COLOR` still wins. |
+| `TERM=dumb` | switches colour off |
+| `XDG_CONFIG_HOME`, `XDG_STATE_HOME` | move the two paths above |
+
+| Exit | When |
+| --- | --- |
+| `0` | the tunnel was closed on purpose, **and** when you press Escape in the picker, **and** for `--version` and `--preview` |
+| `1` | anything that failed: no config, unknown destination, port taken, ssh gave up |
+| `2` | an unrecognised flag, from Go's flag package |
+
+Escape and success sharing `0` is worth knowing before you script around it:
+`tunny <name>` is the form to script with, since it never opens the picker.
+
+## Uninstall
+
+```sh
+rm -f "$(command -v tunny)"          # or: brew uninstall tunny
+rm -rf ~/.config/tunny ~/.local/state/tunny
+```
+
+## Troubleshooting
+
+**`ssh is not on your PATH`.** Install an OpenSSH client. tunny stops before it
+does anything else, so nothing is left half-done.
+
+**`local port 8201 is already taken`.** Something is listening where a forward
+wants to bind, often a tunnel left open in another window. The message carries
+the `lsof` line that names it, and the picker marks these before you choose.
+
+**`Permission denied` or `Could not resolve hostname`.** Those are ssh's own
+words. tunny stops on them instead of retrying, since all three attempts would
+fail the same way. Run it by hand with `-v` to see more:
+`ssh -v -N -L <local>:<to> <host>`.
+
+**`not a terminal`.** You piped tunny somewhere, or ran it from a script. Give
+it a destination name: `tunny gateway`.
+
+**`terminal too narrow`.** The picker needs 20 columns. Widen the window and it
+draws again on the next keystroke.
+
+**No config after upgrading from tuna.** tunny was called tuna until v0.2.0,
+and the error carries the `mv` command that moves your config across.
 
 ## What tunny does not do
 
