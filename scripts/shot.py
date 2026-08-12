@@ -141,6 +141,51 @@ def frames_of(binary, cols):
     return frames
 
 
+def banner_of(binary, root):
+    """The launch banner, captured from the binary rather than retyped.
+
+    Hosts are rewritten to .invalid first: this runs on a developer's machine
+    and a doc-generation script has no business opening a connection to
+    whatever `my-host` happens to resolve to there.
+    """
+    example = (root / "destinations.example.toml").read_text()
+    with tempfile.TemporaryDirectory() as tmp:
+        cfg = pathlib.Path(tmp) / "config" / "tuna"
+        cfg.mkdir(parents=True)
+        (cfg / "destinations.toml").write_text(
+            re.sub(r'^(host = ")[^"]*(")', r"\1nowhere.invalid\2", example, flags=re.M)
+        )
+        first = re.search(r'^name = "([^"]+)"', example, re.M).group(1)
+        proc = subprocess.run(
+            [binary, first],
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            env={
+                **{k: v for k, v in os.environ.items() if k != "CLICOLOR_FORCE"},
+                "NO_COLOR": "1",
+                "XDG_CONFIG_HOME": f"{tmp}/config",
+                "XDG_STATE_HOME": f"{tmp}/state",
+            },
+        )
+    # The banner goes to stdout; everything after it is stderr, so this is it.
+    return proc.stdout.strip("\n")
+
+
+def splice(path, name, body):
+    """Replace the fenced block inside <!-- shot:NAME --> … <!-- /shot:NAME -->."""
+    text = path.read_text()
+    pattern = re.compile(
+        r"(<!-- shot:%s -->.*?```text\n).*?(\n```\n<!-- /shot:%s -->)" % (name, name),
+        re.S,
+    )
+    out, n = pattern.subn(lambda m: m.group(1) + body + m.group(2), text)
+    if n != 1:
+        raise SystemExit(f"{path.name}: marker shot:{name} found {n} times, want 1")
+    path.write_text(out)
+    print(f"  {path.name}  shot:{name}")
+
+
 def write(path, body):
     path.write_text(body + "\n")
     print(f"  {path.name}  {len(body) // 1024 or 1} kB")
@@ -194,6 +239,12 @@ def main():
         print(f"  {png.name}  {png.stat().st_size // 1024} kB")
     else:
         print("  (no rsvg-convert: social-card.png left as it was)")
+
+    # The README's one hand-written illustration, generated for the same reason
+    # the pictures are: a block retyped by hand drifts the first time the
+    # program changes, and this one already had.
+    root = pathlib.Path(__file__).resolve().parent.parent
+    splice(root / "README.md", "banner", banner_of(binary, root))
 
 
 if __name__ == "__main__":

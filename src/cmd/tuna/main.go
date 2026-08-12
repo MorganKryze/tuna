@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -27,25 +28,33 @@ import (
 	"github.com/MorganKryze/tuna/src/internal/ui"
 )
 
-// version is stamped by the release workflow with -ldflags. `go install` and
-// `go build` cannot pass those, so an install from a tag would otherwise call
-// itself "dev" — and the version is the first thing a bug report asks for.
-var version = versionOr("dev")
+// version is what -ldflags "-X main.version=…" writes into, which is how every
+// distribution stamps a Go binary.
+//
+// The initialiser has to stay a plain constant. The linker writes its value
+// into the variable's static data, and a function call here would overwrite it
+// again at package-init time: -X would apply and then be silently undone. That
+// is what used to happen, and it made every packaged build call itself "dev".
+var version = "dev"
 
-// versionOr reads the module version the toolchain records in the binary,
-// which is how `go install …@v0.1.0` knows what it installed. A local build
-// has none and keeps the fallback.
-func versionOr(fallback string) string {
-	bi, ok := debug.ReadBuildInfo()
-	if !ok || bi.Main.Version == "" || bi.Main.Version == "(devel)" {
-		return fallback
+// buildVersion is the fallback for a build nobody stamped: `go install …@v1.2.3`
+// records the module version in the binary, and the toolchain stamps a version
+// derived from VCS for a build inside a git checkout. A source tarball has
+// neither, which is exactly the case -ldflags exists for.
+func buildVersion() string {
+	if version != "dev" {
+		return version // the linker spoke, and it has the last word
 	}
-	return bi.Main.Version
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return version
 }
 
 func main() {
 	noRetry := flag.Bool("no-retry", false, "one attempt, no reconnection")
 	preview := flag.Bool("preview", false, "print the list without opening anything, then exit")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `tuna %s — open an admin SSH tunnel.
 
@@ -53,11 +62,20 @@ func main() {
   tuna <name>       go straight to it
   tuna --no-retry   do not relaunch if it drops
   tuna --preview    see what the list looks like, without opening anything
+  tuna --version    print the version and exit
 
 Config: %s
-`, version, config.Path())
+`, buildVersion(), config.Path())
 	}
 	flag.Parse()
+
+	// Bare, on stdout, exit 0. Every packaging ecosystem's smoke test runs
+	// `<binary> --version` and reads what comes back: Homebrew's `test do`,
+	// Debian's autopkgtest, the AUR check(). Decorating it costs them a regex.
+	if *showVersion {
+		fmt.Println(buildVersion())
+		return
+	}
 
 	if *preview {
 		if err := showPreview(); err != nil {
@@ -103,6 +121,15 @@ func showPreview() error {
 }
 
 func launch(name string, noRetry bool) error {
+	// Before anything is printed. Without this, a missing ssh spends seven
+	// seconds on three retries and blames the network, and the real error is
+	// thrown away with the attempt that produced it. Whether ssh is on PATH is
+	// knowable without launching it, and this project's own rule is to say a
+	// thing before it fails rather than after.
+	if _, err := exec.LookPath(sshPath); err != nil {
+		return fmt.Errorf("%s is not on your PATH; install an OpenSSH client", sshPath)
+	}
+
 	cfg, err := config.Load(config.Path())
 	if err != nil {
 		return err

@@ -12,6 +12,8 @@ const (
 	gutter   = 4 // two of indent, then "▌ " or "  "
 	gap      = 3 // between columns; three reads as a column, two as a typo
 	minNameW = 8
+	// The narrowest width that can hold the chrome without wrapping.
+	minWidth = 20
 	maxNameW = 22
 	// Below this the ports column gives up its labels, and below it again
 	// the whole column goes. The description is what tells two duplicati
@@ -33,6 +35,16 @@ func (p Picker) Frame(width, height int, color bool) string {
 		width = 80
 	}
 	t := ui.Theme(color)
+
+	// Under this, the chrome alone overflows: the prompt needs 5 columns for
+	// "  ❯ ▏" and a row needs 4 before its first letter. Drawing anyway wraps,
+	// a wrapped frame is taller than Lines counts, and the wind-back then
+	// erases the wrong rows on every keystroke. Say so instead, and draw the
+	// list again when the window grows.
+	if width < minWidth {
+		return "\r\n" + ui.Fit("terminal too narrow", width) + "\r\n"
+	}
+
 	matches := p.Matches()
 
 	rows := len(matches) // no height known: never scroll
@@ -128,11 +140,14 @@ func (p Picker) prompt(t ui.Theme, width, matched int) string {
 	if filter == "" {
 		ghost = "type to filter"
 	}
-	// 2 for "❯ ", 1 for the block.
-	switch room := budget - 3; {
+	// 2 for "❯ ", 1 for the block. The floor at zero is what keeps a terminal
+	// narrower than the chrome from slicing past the end of the filter: a
+	// negative room made the comparison below true even for an empty filter,
+	// and the index then ran off the slice. A 4-column tmux pane did it.
+	switch room := max(budget-3, 0); {
 	case ui.Runes(filter) > room:
 		// Keep the tail: what was just typed is what someone is looking at.
-		filter = "…" + string([]rune(filter)[ui.Runes(filter)-room+1:])
+		filter = ui.Fit("…"+string([]rune(filter)[ui.Runes(filter)-room:]), room)
 		ghost = ""
 	default:
 		ghost = ui.Fit(ghost, min(ui.Runes(ghost), room-ui.Runes(filter)))

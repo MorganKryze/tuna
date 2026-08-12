@@ -17,12 +17,17 @@ import (
 // upAfter is how long ssh has to survive before the tunnel counts as open.
 const upAfter = 3 * time.Second
 
+// sshPath is a variable rather than a literal so a test can point tuna at a
+// fake ssh on a controlled PATH. Nothing sets it in production; it is the seam
+// that makes the process and signal handling testable without a real server.
+var sshPath = "ssh"
+
 // sshRunner is the only code in the program that touches processes and
 // signals. It reports how long ssh lived and how it ended; tunnel.Connect
 // decides what that means. Keeping the two apart is what lets the whole
 // reconnection policy be tested without spawning anything.
 func sshRunner(d *config.Destination, up func()) tunnel.Result {
-	cmd := exec.Command("ssh", tunnel.SSHArgs(d)...)
+	cmd := exec.Command(sshPath, tunnel.SSHArgs(d)...)
 	cmd.Stdin = os.Stdin // the host-key prompt and any passphrase need the TTY
 	cmd.Stdout = os.Stdout
 

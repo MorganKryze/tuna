@@ -189,16 +189,25 @@ func TestFailedKeepsSshsOwnWordsFirst(t *testing.T) {
 	}
 }
 
-// The version is the first thing a bug report asks for, and the release
-// workflow's -ldflags only reaches the binaries it builds itself: an install
-// straight from a tag has to find its version somewhere else.
-func TestVersionFallsBackToTheBuildInfo(t *testing.T) {
-	// Under `go test` the build info exists but carries no module version,
-	// which is the same shape as a local `go build`.
-	if got := versionOr("dev"); got != "dev" {
-		t.Fatalf("a local build has to keep the fallback, got %q", got)
+// The version is the first thing a bug report asks for, and it reaches the
+// binary by three different routes. The one that matters most is the linker:
+// every distribution stamps a Go binary with -ldflags, and that only works on
+// a variable whose initialiser is a constant. It was a function call once, and
+// -X applied and was then silently undone at package-init time.
+func TestTheLinkerHasTheLastWordOnTheVersion(t *testing.T) {
+	original := version
+	t.Cleanup(func() { version = original })
+
+	version = "v9.9.9"
+	if got := buildVersion(); got != "v9.9.9" {
+		t.Fatalf("a stamped version has to win, got %q", got)
 	}
-	if version == "" {
-		t.Error("the version shown must never be empty")
+
+	// Unstamped: the build info answers for `go install …@v1.2.3` and for a
+	// build inside a git checkout. Under `go test` there is one, so all this
+	// pins is that the fallback never hands back an empty string.
+	version = "dev"
+	if got := buildVersion(); got == "" {
+		t.Fatal("the version shown must never be empty")
 	}
 }

@@ -66,7 +66,7 @@ func TestNoLineEverExceedsTheWidth(t *testing.T) {
 			{Local: 65535, To: "127.0.0.1:1", Label: "A label that is also rather long"},
 		},
 	})
-	for width := 20; width <= 200; width++ {
+	for width := 1; width <= 200; width++ {
 		for _, filter := range []string{"", "dupl", "zzz"} {
 			p := Picker{All: long, Filter: filter}
 			for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
@@ -234,12 +234,36 @@ func TestBusyPortsAreAnnouncedInTheList(t *testing.T) {
 // to be sized with it — otherwise it is the thing that overflows the row.
 func TestABusyColumnStillFits(t *testing.T) {
 	busy := map[string][]int{"hyperviseur": {9090, 9120}, "gateway": {8200}, "control-plane": {8201}}
-	for width := 20; width <= 200; width++ {
+	for width := 1; width <= 200; width++ {
 		p := Picker{All: real(), Busy: busy}
 		for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
 			if n := ui.Runes(l); n > width {
 				t.Fatalf("width %d: a line %d columns wide: %q", width, n, l)
 			}
 		}
+	}
+}
+
+// Widths 1 to 5 used to panic: the prompt's column budget went negative and
+// the slice that keeps the tail of a long filter ran off the end, for an empty
+// filter as much as a typed one. `size()` passes on whatever the terminal
+// reports with no floor, so a four-column pane reached it.
+func TestNarrowTerminalsSaySoInsteadOfDrawingOrPanicking(t *testing.T) {
+	for width := 1; width < 20; width++ {
+		for _, filter := range []string{"", "d", "duplicati-and-then-some"} {
+			frame := plain(Picker{All: real(), Filter: filter}.Frame(width, 24, false))
+			if !strings.Contains(frame, "too narrow") && !strings.Contains(frame, "…") {
+				t.Errorf("width %d, filter %q: want a notice, got %q", width, filter, frame)
+			}
+			for _, l := range strings.Split(frame, "\r\n") {
+				if n := ui.Runes(l); n > width {
+					t.Fatalf("width %d: a line %d columns wide: %q", width, n, l)
+				}
+			}
+		}
+	}
+	// And at the first usable width the list is back.
+	if frame := plain(Picker{All: real()}.Frame(20, 24, false)); strings.Contains(frame, "too narrow") {
+		t.Errorf("width 20 has to draw the list:\n%s", frame)
 	}
 }
