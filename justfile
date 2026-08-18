@@ -21,6 +21,20 @@ coverage:
 lint:
     golangci-lint run
 
+# Fuzz the picker past the seed corpus `just test` already runs. Give it minutes.
+fuzz time="60s":
+    go test ./internal/pick/ -run xxx -fuzz FuzzTheFrameNeverOverflows -fuzztime {{time}}
+
+# Compile for every platform PACKAGING.md promises.
+cross:
+    #!/usr/bin/env bash
+    set -eu
+    for t in linux/amd64 linux/arm64 linux/386 linux/arm linux/riscv64 \
+             darwin/amd64 darwin/arm64 \
+             freebsd/amd64 freebsd/arm64 netbsd/amd64 openbsd/amd64 openbsd/arm64; do
+        GOOS="${t%%/*}" GOARCH="${t##*/}" go build ./... && echo "  ok    $t"
+    done
+
 # Redraws the README's pictures from the binary's real output.
 # Re-run it whenever the picker's drawing changes.
 shot: build

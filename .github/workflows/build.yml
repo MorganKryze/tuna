@@ -27,6 +27,35 @@ jobs:
         with:
           version: latest
 
+  # PACKAGING.md names five operating systems and every architecture Go
+  # supports for them, and the release ships four binaries that nothing
+  # compiles until the tag is pushed. Compiling is not testing, but a build
+  # that does not build is the one failure a packager cannot work around, and
+  # it is the cheapest thing in this file to rule out.
+  cross:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+      - name: compile everywhere PACKAGING.md promises
+        run: |
+          set -eu
+          fail=0
+          for target in \
+            linux/amd64 linux/arm64 linux/386 linux/arm linux/riscv64 \
+            darwin/amd64 darwin/arm64 \
+            freebsd/amd64 freebsd/arm64 netbsd/amd64 openbsd/amd64 openbsd/arm64
+          do
+            if GOOS="${target%%/*}" GOARCH="${target##*/}" go build ./...; then
+              echo "  ok    $target"
+            else
+              echo "::error::$target does not build"; fail=1
+            fi
+          done
+          exit "$fail"
+
   test:
     # The ssh runner and the terminal drawing are Unix-only; the rest is
     # portable. Both systems run because the reconnection loop is the kind of
@@ -70,8 +99,17 @@ jobs:
           # Raise it whenever the real measurement allows. A floor under
           # reality protects nothing; a floor above it blocks everyone and
           # proves nothing.
-          awk -v p="$pct" 'BEGIN { exit (p + 0 >= 65) ? 0 : 1 }' \
-            || { echo "::error::coverage ${pct}% is under the 65% floor"; exit 1; }
+          awk -v p="$pct" 'BEGIN { exit (p + 0 >= 68) ? 0 : 1 }' \
+            || { echo "::error::coverage ${pct}% is under the 68% floor"; exit 1; }
+
+      # The seed corpus runs on every `go test`; this is the part that looks
+      # for inputs nobody thought of. Half a minute finds the shape of bug the
+      # picker has actually had — a width that makes a budget go negative, a
+      # byte that is half a character — and a longer run belongs in nobody's
+      # pull request.
+      - name: fuzz the picker
+        if: matrix.os == 'ubuntu-latest'
+        run: go test ./internal/pick/ -run xxx -fuzz FuzzTheFrameNeverOverflows -fuzztime 30s
 
       # One system publishes, or the two take turns overwriting each other on
       # the same branch. ubuntu, because it is the one that counts the most
