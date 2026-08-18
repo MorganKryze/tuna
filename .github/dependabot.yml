@@ -10,3 +10,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # codeql-action/init and codeql-action/analyze are two entries of one
+      # action, and it refuses to run with the two halves at different
+      # versions: "Loaded a configuration file for version X, but running
+      # version Y". Ungrouped, dependabot opens two pull requests that can
+      # only pass together, so both are red until somebody merges them by
+      # hand in the right order.
+      codeql:
+        patterns:
+          - github/codeql-action/*
