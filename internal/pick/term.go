@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"golang.org/x/term"
 
@@ -60,6 +62,15 @@ func Pick(ctx context.Context, dests []config.Destination, busy map[string][]int
 		}
 	}()
 
+	// A resize is the one event that changes the frame without anybody
+	// touching a key. Without this the list keeps the width it had when it
+	// was drawn until the next keystroke, which on a narrowed window means
+	// rows already wrapped and a wind-back counting lines that no longer
+	// match what is on screen.
+	winch := make(chan os.Signal, 1)
+	signal.Notify(winch, syscall.SIGWINCH)
+	defer signal.Stop(winch)
+
 	out := os.Stderr
 	color := ui.ColorOK(out)
 	p := Picker{All: dests, Busy: busy}
@@ -80,6 +91,13 @@ func Pick(ctx context.Context, dests []config.Destination, busy map[string][]int
 		case err := <-readErr:
 			windBack(out, Lines(frame))
 			return "", err
+		case <-winch:
+			// Redraw at the new size, nothing more. The wind-back is
+			// best-effort here and cannot be anything else: the terminal has
+			// already reflowed what is on screen, and how it did that is not
+			// knowable from this side.
+			windBack(out, Lines(frame))
+			continue
 		case buf = <-keys:
 		}
 		// Wind back the frame that is on screen, before the keystroke can
