@@ -62,18 +62,30 @@ func TestFrameLooksLikeThis(t *testing.T) {
 // Lines reports, and the wind-back then eats the wrong lines and tears the
 // screen apart on every keystroke.
 func TestNoLineEverExceedsTheWidth(t *testing.T) {
-	long := append(real(), config.Destination{
-		Name: "une-destination-au-nom-vraiment-tres-long",
-		Desc: strings.Repeat("description interminable ", 8),
-		Forward: []config.Forward{
-			{Local: 65535, To: "127.0.0.1:1", Label: "A label that is also rather long"},
+	long := append(real(),
+		config.Destination{
+			Name: "une-destination-au-nom-vraiment-tres-long",
+			Desc: strings.Repeat("description interminable ", 8),
+			Forward: []config.Forward{
+				{Local: 65535, To: "127.0.0.1:1", Label: "A label that is also rather long"},
+			},
 		},
-	})
+		// Double-width characters, which are the case a layout measured in
+		// runes gets exactly backwards: it counts these as half of what they
+		// draw, so every budget comes out too generous and the row wraps.
+		config.Destination{
+			Name: "本番環境",
+			Desc: strings.Repeat("東京のデータセンター ", 4) + " 🚀",
+			Forward: []config.Forward{
+				{Local: 9090, To: "127.0.0.1:9090", Label: "コックピット"},
+			},
+		},
+	)
 	for width := 1; width <= 200; width++ {
-		for _, filter := range []string{"", "dupl", "zzz"} {
+		for _, filter := range []string{"", "dupl", "zzz", "東京", "🚀"} {
 			p := Picker{All: long, Filter: filter}
 			for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
-				if n := ui.Runes(l); n > width {
+				if n := ui.Width(l); n > width {
 					t.Fatalf("width %d, filter %q: a line %d columns wide: %q", width, filter, n, l)
 				}
 			}
@@ -159,7 +171,7 @@ func TestAccentsDoNotShiftColumns(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("want 2 rows, got %d: %q", len(got), got)
 	}
-	if a, b := strings.Index(got[0], "no accent"), strings.Index(got[1], "with accents"); ui.Runes(got[0][:a]) != ui.Runes(got[1][:b]) {
+	if a, b := strings.Index(got[0], "no accent"), strings.Index(got[1], "with accents"); ui.Width(got[0][:a]) != ui.Width(got[1][:b]) {
 		t.Fatalf("the descriptions do not start at the same column:\n%q\n%q", got[0], got[1])
 	}
 }
@@ -240,7 +252,7 @@ func TestABusyColumnStillFits(t *testing.T) {
 	for width := 1; width <= 200; width++ {
 		p := Picker{All: real(), Busy: busy}
 		for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
-			if n := ui.Runes(l); n > width {
+			if n := ui.Width(l); n > width {
 				t.Fatalf("width %d: a line %d columns wide: %q", width, n, l)
 			}
 		}
@@ -259,7 +271,7 @@ func TestNarrowTerminalsSaySoInsteadOfDrawingOrPanicking(t *testing.T) {
 				t.Errorf("width %d, filter %q: want a notice, got %q", width, filter, frame)
 			}
 			for _, l := range strings.Split(frame, "\r\n") {
-				if n := ui.Runes(l); n > width {
+				if n := ui.Width(l); n > width {
 					t.Fatalf("width %d: a line %d columns wide: %q", width, n, l)
 				}
 			}

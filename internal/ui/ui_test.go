@@ -39,9 +39,14 @@ func TestFitAndFitRight(t *testing.T) {
 // Fit is what keeps a line inside the terminal, so the property that matters
 // is the one about columns, not about any particular string.
 func TestFitAlwaysYieldsExactlyWColumns(t *testing.T) {
-	for _, s := range []string{"", "a", "abc", "éàü", strings.Repeat("long ", 20)} {
+	for _, s := range []string{
+		"", "a", "abc", "éàü", strings.Repeat("long ", 20),
+		// Double-width, so the padding has to be counted rather than
+		// assumed, and a cut can land on a character that will not fit.
+		"世界", "a世b界c", "🚀 deploy", "e\u0301 combining",
+	} {
 		for w := 1; w <= 30; w++ {
-			if got := Runes(Fit(s, w)); got != w {
+			if got := Width(Fit(s, w)); got != w {
 				t.Fatalf("Fit(%q,%d) is %d columns wide", s, w, got)
 			}
 		}
@@ -139,4 +144,61 @@ func TestHideControlEchoSurvivesTheAbsenceOfATerminal(t *testing.T) {
 	}
 	restore()
 	restore() // and twice, because a defer can outlive an early return
+}
+
+// Width is the measurement the whole layout is built on: every column budget
+// in render.go is a subtraction from it. Byte length and rune count are both
+// wrong, and they are wrong in opposite directions.
+func TestWidthCountsColumns(t *testing.T) {
+	for _, c := range []struct {
+		in   string
+		want int
+	}{
+		{"", 0},
+		{"abc", 3},
+		// Two bytes, one column. Measuring in bytes drifts right by one per
+		// accent, which is what padding with len() used to do.
+		{"éàü", 3},
+		// One rune, two columns. Measuring in runes drifts left by one per
+		// ideograph, and a row that drifts left wraps.
+		{"世界", 4},
+		{"\uFF21", 2},  // fullwidth Latin capital A
+		{"　", 2},       // ideographic space
+		{"e\u0301", 1}, // e plus a combining acute: one glyph, one column
+		{"🚀", 2},
+		{"👨\u200d💻", 2}, // joined into one glyph, so one glyph's worth of columns
+		{"a\tb", 2},     // a control character is consumed by the terminal
+	} {
+		if got := Width(c.in); got != c.want {
+			t.Errorf("Width(%q) = %d, want %d", c.in, got, c.want)
+		}
+	}
+}
+
+// FitTail is the filter line: what has just been typed is what someone is
+// looking at, so the end is the half that survives.
+func TestFitTailKeepsTheEnd(t *testing.T) {
+	for _, c := range []struct {
+		in   string
+		w    int
+		want string
+	}{
+		{"abc", 5, "abc  "},
+		{"abcdef", 4, "…def"},
+		{"abc", 1, "…"},
+		{"abc", 0, ""},
+		// The ideograph will not fit beside the ellipsis, so it goes whole
+		// and its column becomes a space: half a character is a column the
+		// terminal fills however it likes.
+		{"a世界", 4, "…界 "},
+		{"a世界", 3, "…界"},
+		{"a世界", 2, "… "},
+	} {
+		if got := FitTail(c.in, c.w); got != c.want {
+			t.Errorf("FitTail(%q,%d) = %q, want %q", c.in, c.w, got, c.want)
+		}
+		if got := Width(FitTail(c.in, c.w)); c.w > 0 && got != c.w {
+			t.Errorf("FitTail(%q,%d) is %d columns wide", c.in, c.w, got)
+		}
+	}
 }

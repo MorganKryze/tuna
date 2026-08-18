@@ -69,7 +69,7 @@ func (p Picker) Frame(width, height int, color bool) string {
 	switch {
 	case len(matches) == 0:
 		quoted := "\u201c" + p.Filter + "\u201d"
-		if ui.Runes("    nothing matches "+quoted) <= width {
+		if ui.Width("    nothing matches "+quoted) <= width {
 			line(&b, t.Wrap(ui.Dim, "    nothing matches ")+t.Wrap(ui.Bold, quoted))
 		} else {
 			line(&b, t.Wrap(ui.Dim, ui.Fit("    nothing matches", width)))
@@ -98,7 +98,7 @@ func hint(t ui.Theme, width int) string {
 		"    ↑↓ move    ⏎ open    ⎋ cancel",
 		"    ↑↓ · ⏎ · ⎋",
 	} {
-		if ui.Runes(s) <= width {
+		if ui.Width(s) <= width {
 			return t.Wrap(ui.Dim, s)
 		}
 	}
@@ -130,7 +130,7 @@ func (p Picker) prompt(t ui.Theme, width, matched int) string {
 	// overflows wraps exactly like an overflowing row, and breaks the
 	// wind-back the same way.
 	budget := width - 2 // the two of indent; the right edge is the rows' right edge
-	if room := budget - ui.Runes(count) - gap; room >= 12 {
+	if room := budget - ui.Width(count) - gap; room >= 12 {
 		budget = room
 	} else {
 		count = ""
@@ -148,18 +148,18 @@ func (p Picker) prompt(t ui.Theme, width, matched int) string {
 	// negative room made the comparison below true even for an empty filter,
 	// and the index then ran off the slice. A 4-column tmux pane did it.
 	switch room := max(budget-3, 0); {
-	case ui.Runes(filter) > room:
+	case ui.Width(filter) > room:
 		// Keep the tail: what was just typed is what someone is looking at.
-		filter = ui.Fit("…"+string([]rune(filter)[ui.Runes(filter)-room:]), room)
+		filter = ui.FitTail(filter, room)
 		ghost = ""
 	default:
-		ghost = ui.Fit(ghost, min(ui.Runes(ghost), room-ui.Runes(filter)))
+		ghost = ui.Fit(ghost, min(ui.Width(ghost), room-ui.Width(filter)))
 	}
 
 	left := "  " + t.Wrap(ui.Accent, "❯") + " " + filter + t.Wrap(ui.Accent, "▏") + t.Wrap(ui.Dim, ghost)
-	leftW := 5 + ui.Runes(filter) + ui.Runes(ghost)
+	leftW := 5 + ui.Width(filter) + ui.Width(ghost)
 
-	if pad := width - leftW - ui.Runes(count); count != "" && pad > 0 {
+	if pad := width - leftW - ui.Width(count); count != "" && pad > 0 {
 		return left + strings.Repeat(" ", pad) + t.Wrap(ui.Dim, count)
 	}
 	return left
@@ -202,9 +202,9 @@ func (p Picker) row(t ui.Theme, d config.Destination, selected bool, nameW, desc
 func (p Picker) columns(width int) (nameW, descW, portW int, labels bool) {
 	var labelled, bare int
 	for _, d := range p.All {
-		nameW = max(nameW, ui.Runes(d.Name))
-		labelled = max(labelled, ui.Runes(p.ports(d, true)))
-		bare = max(bare, ui.Runes(p.ports(d, false)))
+		nameW = max(nameW, ui.Width(d.Name))
+		labelled = max(labelled, ui.Width(p.ports(d, true)))
+		bare = max(bare, ui.Width(p.ports(d, false)))
 	}
 	nameW = min(max(nameW, minNameW), maxNameW)
 	// The cap is not enough on its own: a very narrow terminal has less room

@@ -54,7 +54,7 @@ func Preview(dests []config.Destination, busy map[string][]int, width, height in
 
 	var b strings.Builder
 	for _, s := range states {
-		fmt.Fprintf(&b, "\n%s\n", ui.Theme(color).Wrap(ui.Dim, "── "+s.titre+" "+strings.Repeat("─", max(width-ui.Runes(s.titre)-5, 0))))
+		fmt.Fprintf(&b, "\n%s\n", ui.Theme(color).Wrap(ui.Dim, "── "+s.titre+" "+strings.Repeat("─", max(width-ui.Width(s.titre)-5, 0))))
 		// The frame speaks raw mode; on a preview nothing has put the
 		// terminal there, so the carriage returns come back out.
 		b.WriteString(strings.ReplaceAll(s.p.Frame(width, height, color), "\r\n", "\n"))

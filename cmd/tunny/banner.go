@@ -21,7 +21,7 @@ func banner(d *config.Destination, color bool) string {
 
 	labelW := 0
 	for _, f := range d.Forward {
-		labelW = max(labelW, ui.Runes(label(d, f)))
+		labelW = max(labelW, ui.Width(label(d, f)))
 	}
 
 	var b strings.Builder
