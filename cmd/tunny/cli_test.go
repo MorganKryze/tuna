@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -149,9 +150,11 @@ func TestTheCommandLineSurface(t *testing.T) {
 			err := cmd.Run()
 
 			code := 0
-			if ee, ok := err.(*exec.ExitError); ok {
+			var ee *exec.ExitError
+			switch {
+			case errors.As(err, &ee):
 				code = ee.ExitCode()
-			} else if err != nil {
+			case err != nil:
 				t.Fatal(err)
 			}
 			if code != c.wantExit {

@@ -30,7 +30,12 @@ var sshPath = "ssh"
 // decides what that means. Keeping the two apart is what lets the whole
 // reconnection policy be tested without spawning anything.
 func sshRunner(ctx context.Context, d *config.Destination, up func()) tunnel.Result {
-	cmd := exec.CommandContext(ctx, sshPath, tunnel.SSHArgs(d)...)
+	// Running ssh with arguments from the config is the program, not a
+	// vulnerability: the config is the operator's own file, in their own home
+	// directory, and SSHArgs builds a fixed argument vector rather than a
+	// shell string, so nothing in it can become a second command.
+	cmd := exec.CommandContext(ctx, sshPath, tunnel.SSHArgs(d)...) //nolint:gosec // an ssh launcher launches ssh
+
 	cmd.Stdin = os.Stdin // the host-key prompt and any passphrase need the TTY
 	cmd.Stdout = os.Stdout
 

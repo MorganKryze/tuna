@@ -37,6 +37,9 @@ type Destination struct {
 	Forward []Forward `toml:"forward"`
 }
 
+// Config is the whole file: a list of destinations and nothing else. There
+// are no global settings, because every one of them would be a second place
+// to look for an answer that ssh_config already has.
 type Config struct {
 	Destination []Destination `toml:"destination"`
 }
@@ -57,6 +60,8 @@ func Path() string {
 	return filepath.Join(home, ".config", "tunny", "destinations.toml")
 }
 
+// Load reads and validates the file, refusing anything it does not
+// understand. A config that half-parses is a tunnel that half-opens.
 func Load(path string) (*Config, error) {
 	var cfg Config
 	md, err := toml.DecodeFile(path, &cfg)
@@ -101,6 +106,9 @@ func exists(path string) bool {
 	return err == nil
 }
 
+// Find returns the destination with this exact name. No prefix matching and
+// no fuzz: `tunny prod` opening a tunnel to "production-backup" is not a
+// convenience.
 func (c *Config) Find(name string) (*Destination, bool) {
 	for i := range c.Destination {
 		if c.Destination[i].Name == name {

@@ -230,8 +230,8 @@ func launch(ctx context.Context, name string, noRetry bool) error {
 	defer ui.HideControlEcho(os.Stdin)()
 
 	color := ui.ColorOK(os.Stderr)
-	retry.Notify = func(attempt, max int, wait time.Duration) {
-		fmt.Fprint(os.Stderr, retrying(attempt, max, wait, color))
+	retry.Notify = func(attempt, total int, wait time.Duration) {
+		fmt.Fprint(os.Stderr, retrying(attempt, total, wait, color))
 	}
 	retry.OnUp = func(reconnected bool) {
 		if reconnected {

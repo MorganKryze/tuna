@@ -37,6 +37,7 @@ const (
 // Theme turns colour on or off for everything at once.
 type Theme bool
 
+// On reports whether to emit escape codes at all.
 func (t Theme) On() bool { return bool(t) }
 
 // Wrap styles s, or hands it back untouched when colour is off. An empty

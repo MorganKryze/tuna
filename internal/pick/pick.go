@@ -17,8 +17,12 @@ import (
 	"github.com/MorganKryze/tunny/internal/config"
 )
 
+// Key is a keystroke the picker acts on, which is not the same as a byte:
+// an arrow is three bytes, and Ctrl-C in raw mode is one that means Escape.
 type Key int
 
+// The whole vocabulary. Anything else readKey reports as KeyNone, which
+// Update treats as a keystroke that changes nothing.
 const (
 	KeyNone Key = iota
 	KeyUp
@@ -65,6 +69,11 @@ func (p Picker) Matches() []config.Destination {
 // (empty if none) and whether the picker is finished.
 func (p Picker) Update(k Key, r rune) (Picker, string, bool) {
 	switch k {
+	case KeyNone:
+		// A byte the picker has no meaning for — a function key, a mouse
+		// report, half a paste. Redrawing the same frame is the right answer
+		// and the clamp below is harmless, so this falls through to it.
+
 	case KeyEsc:
 		return p, "", true
 

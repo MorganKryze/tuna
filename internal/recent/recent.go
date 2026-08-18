@@ -37,7 +37,9 @@ func Path() string {
 // Load never fails. A missing or damaged order file costs a list in the wrong
 // order, which is not worth refusing to start over.
 func Load(path string) []string {
-	body, err := os.ReadFile(path)
+	// The path is tunny's own, built by Path from XDG_STATE_HOME or from the
+	// home directory. Somebody who can set either can already run anything.
+	body, err := os.ReadFile(path) //nolint:gosec // the path is ours, not input
 	if err != nil {
 		return nil
 	}
@@ -64,7 +66,10 @@ func Load(path string) []string {
 // failure it would protect against loses a list, not a tunnel.
 func Save(path string, names []string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	// 0700, not 0755. The file inside is 0600 and lists which machines
+	// somebody administers; leaving the directory readable publishes the fact
+	// that it exists and how often it changes, for no one's benefit.
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
 	// In the target's own directory: rename is only atomic within a

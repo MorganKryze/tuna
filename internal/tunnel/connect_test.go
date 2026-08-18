@@ -276,8 +276,8 @@ func TestNotifyIsToldWhichAttemptAndHowLong(t *testing.T) {
 
 	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
 	r := testRetry()
-	r.Notify = func(attempt, max int, wait time.Duration) {
-		seen = append(seen, notice{attempt, max, wait})
+	r.Notify = func(attempt, total int, wait time.Duration) {
+		seen = append(seen, notice{attempt, total, wait})
 	}
 	_ = Connect(t.Context(), &config.Destination{Name: "a"}, f.run, r)
 

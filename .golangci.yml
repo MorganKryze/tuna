@@ -6,13 +6,26 @@ formatters:
     - goimports
 
 linters:
-  # The default set: errcheck, govet, ineffassign, staticcheck, unused.
+  # The default set — errcheck, govet, ineffassign, staticcheck, unused — plus
+  # the ones below. Every addition here earned its place by finding something:
+  # revive found ten exported identifiers with no doc comment and three
+  # shadowing a builtin, exhaustive found a switch that ignored a Key, gosec
+  # found a state directory at 0755, errorlint a type assertion that would
+  # miss a wrapped error.
   #
-  # misspell was here and is gone. It reads English, and every string this
-  # binary prints is French: it flagged "ressemble" as a typo for "resemble"
-  # and "conflit" for "conflict", and caught nothing real in between. An
-  # ignore list would have grown with the interface, one entry per French
-  # word that happens to look like an English typo.
+  # misspell is back. It was dropped when every string this binary printed was
+  # French and it flagged "conflit" as a typo for "conflict"; the interface has
+  # been English since v0.1.1, and an ignore list is no longer the price.
+  enable:
+    - revive
+    - misspell
+    - errorlint
+    - exhaustive
+    - gosec
+    - unconvert
+    - usestdlibvars
+    - nolintlint # a //nolint without a reason is a finding somebody buried
+
   settings:
     errcheck:
       # Restoring the terminal on the way out and writing the escape codes
@@ -27,3 +40,12 @@ linters:
         - (*strings.Builder).Write
         - io.WriteString
         - fmt.Fprintf
+
+  exclusions:
+    rules:
+      # gosec reads a test suite as an attack: the whole point of this one is
+      # to build a binary, write a fake ssh and run it. Its findings there are
+      # the test doing its job, and eight //nolint lines would say less than
+      # this rule does.
+      - path: _test\.go
+        linters: [gosec]

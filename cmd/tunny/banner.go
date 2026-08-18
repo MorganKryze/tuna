@@ -88,12 +88,12 @@ func failed(err error, color bool) string {
 // retrying is the line printed between two attempts. Without it a dropped
 // tunnel looks exactly like a hung one: ssh says nothing on the way down, and
 // a terminal that has gone quiet for four seconds reads as a crash.
-func retrying(attempt, max int, wait time.Duration, color bool) string {
+func retrying(attempt, total int, wait time.Duration, color bool) string {
 	t := ui.Theme(color)
 	return fmt.Sprintf("\n    %s %s\n",
 		t.Wrap(ui.Warn, "⟳"),
 		t.Wrap(ui.Dim, fmt.Sprintf("connection lost, retrying %d/%d in %s",
-			attempt, max, wait.Round(time.Second))))
+			attempt, total, wait.Round(time.Second))))
 }
 
 // busyError is what replaces ssh's three lines of complaint when the local

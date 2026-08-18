@@ -16,7 +16,7 @@ var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func plain(s string) string { return ansi.ReplaceAllString(s, "") }
 
-func real() []config.Destination {
+func realDests() []config.Destination {
 	return []config.Destination{
 		{Name: "hypervisor", Desc: "Cockpit and Komodo, the admin root", Forward: []config.Forward{
 			{Local: 9090, To: "127.0.0.1:9090", Label: "Cockpit"},
@@ -42,7 +42,7 @@ func rows(frame string) []string {
 // column alignment is the kind of thing that is obvious to a human and
 // invisible to an assertion about substrings.
 func TestFrameLooksLikeThis(t *testing.T) {
-	got := plain(Picker{All: real()}.Frame(80, 24, false))
+	got := plain(Picker{All: realDests()}.Frame(80, 24, false))
 	want := "" +
 		"\r\n" +
 		"  ❯ ▏type to filter                                                          3/3\r\n" +
@@ -62,7 +62,7 @@ func TestFrameLooksLikeThis(t *testing.T) {
 // Lines reports, and the wind-back then eats the wrong lines and tears the
 // screen apart on every keystroke.
 func TestNoLineEverExceedsTheWidth(t *testing.T) {
-	long := append(real(),
+	long := append(realDests(),
 		config.Destination{
 			Name: "une-destination-au-nom-vraiment-tres-long",
 			Desc: strings.Repeat("description interminable ", 8),
@@ -96,14 +96,14 @@ func TestNoLineEverExceedsTheWidth(t *testing.T) {
 // Colour must never change the geometry: the escape codes are invisible, so
 // the same frame with and without them has to lay out identically.
 func TestColourDoesNotChangeTheLayout(t *testing.T) {
-	p := Picker{All: real(), Filter: "dupl", Cursor: 1}
+	p := Picker{All: realDests(), Filter: "dupl", Cursor: 1}
 	if got, want := plain(p.Frame(80, 24, true)), plain(p.Frame(80, 24, false)); got != want {
 		t.Fatalf("colour moves columns.\n--- with ---\n%s\n--- without ---\n%s", got, want)
 	}
 }
 
 func TestNoColourMeansNoEscapeCodes(t *testing.T) {
-	frame := Picker{All: real(), Filter: "dupl"}.Frame(80, 24, false)
+	frame := Picker{All: realDests(), Filter: "dupl"}.Frame(80, 24, false)
 	if ansi.MatchString(frame) {
 		t.Fatalf("an ANSI sequence survived color=false: %q", frame)
 	}
@@ -113,8 +113,8 @@ func TestNoColourMeansNoEscapeCodes(t *testing.T) {
 // actually written — off by one and every keystroke shifts the screen.
 func TestLinesCountsTheFrame(t *testing.T) {
 	for _, p := range []Picker{
-		{All: real()},
-		{All: real(), Filter: "zzz"},
+		{All: realDests()},
+		{All: realDests(), Filter: "zzz"},
 		{All: nil},
 	} {
 		frame := p.Frame(80, 24, false)
@@ -141,7 +141,7 @@ func TestColumnsGiveWayInOrder(t *testing.T) {
 		{40, "", "9090"},
 	}
 	for _, c := range cases {
-		frame := plain(Picker{All: real()}.Frame(c.width, 24, false))
+		frame := plain(Picker{All: realDests()}.Frame(c.width, 24, false))
 		if c.wantIn != "" && !strings.Contains(frame, c.wantIn) {
 			t.Errorf("width %d: want %q in the frame:\n%s", c.width, c.wantIn, frame)
 		}
@@ -154,7 +154,7 @@ func TestColumnsGiveWayInOrder(t *testing.T) {
 // A truncated cell has to say so, otherwise a description reads as complete
 // when it is not.
 func TestTruncationIsVisible(t *testing.T) {
-	frame := plain(Picker{All: real()}.Frame(50, 24, false))
+	frame := plain(Picker{All: realDests()}.Frame(50, 24, false))
 	if !strings.Contains(frame, "…") {
 		t.Fatalf("at 50 columns a description has to be cut, and say so:\n%s", frame)
 	}
@@ -230,7 +230,7 @@ func TestAShortTerminalSaysWhatIsHidden(t *testing.T) {
 // cannot open. Saying so in the list is the whole point: the alternative is
 // finding out from ssh, after a banner has promised a tunnel.
 func TestBusyPortsAreAnnouncedInTheList(t *testing.T) {
-	p := Picker{All: real(), Busy: map[string][]int{"control-plane": {8201}}}
+	p := Picker{All: realDests(), Busy: map[string][]int{"control-plane": {8201}}}
 	frame := plain(p.Frame(80, 24, false))
 
 	if !strings.Contains(frame, "● 8201 in use") {
@@ -250,7 +250,7 @@ func TestBusyPortsAreAnnouncedInTheList(t *testing.T) {
 func TestABusyColumnStillFits(t *testing.T) {
 	busy := map[string][]int{"hyperviseur": {9090, 9120}, "gateway": {8200}, "control-plane": {8201}}
 	for width := 1; width <= 200; width++ {
-		p := Picker{All: real(), Busy: busy}
+		p := Picker{All: realDests(), Busy: busy}
 		for _, l := range strings.Split(plain(p.Frame(width, 24, false)), "\r\n") {
 			if n := ui.Width(l); n > width {
 				t.Fatalf("width %d: a line %d columns wide: %q", width, n, l)
@@ -266,7 +266,7 @@ func TestABusyColumnStillFits(t *testing.T) {
 func TestNarrowTerminalsSaySoInsteadOfDrawingOrPanicking(t *testing.T) {
 	for width := 1; width < 20; width++ {
 		for _, filter := range []string{"", "d", "duplicati-and-then-some"} {
-			frame := plain(Picker{All: real(), Filter: filter}.Frame(width, 24, false))
+			frame := plain(Picker{All: realDests(), Filter: filter}.Frame(width, 24, false))
 			if !strings.Contains(frame, "too narrow") && !strings.Contains(frame, "…") {
 				t.Errorf("width %d, filter %q: want a notice, got %q", width, filter, frame)
 			}
@@ -278,7 +278,7 @@ func TestNarrowTerminalsSaySoInsteadOfDrawingOrPanicking(t *testing.T) {
 		}
 	}
 	// And at the first usable width the list is back.
-	if frame := plain(Picker{All: real()}.Frame(20, 24, false)); strings.Contains(frame, "too narrow") {
+	if frame := plain(Picker{All: realDests()}.Frame(20, 24, false)); strings.Contains(frame, "too narrow") {
 		t.Errorf("width 20 has to draw the list:\n%s", frame)
 	}
 }

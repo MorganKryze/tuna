@@ -25,7 +25,11 @@ import (
 type Outcome int
 
 const (
+	// OutcomeFailed is anything the tunnel did on its own: the network went,
+	// the far side closed, ssh refused a forward.
 	OutcomeFailed Outcome = iota
+	// OutcomeInterrupted is the operator asking for it to stop, by any of the
+	// ways there are to ask.
 	OutcomeInterrupted
 )
 
@@ -47,6 +51,8 @@ type Result struct {
 // it rather than leave one behind.
 type Runner func(ctx context.Context, d *config.Destination, up func()) Result
 
+// Retry is the whole reconnection policy, passed in rather than looked up, so
+// a test can drive an episode in microseconds and --no-retry is one field.
 type Retry struct {
 	Max         int           // reconnection attempts per episode
 	StableAfter time.Duration // held this long = the episode is over
@@ -60,10 +66,12 @@ type Retry struct {
 	// rather than starting. ssh says nothing either way, so without these a
 	// dropped tunnel, a hung one and a recovered one all look alike from the
 	// terminal. Both optional: nil simply stays quiet.
-	Notify func(attempt, max int, wait time.Duration)
+	Notify func(attempt, total int, wait time.Duration)
 	OnUp   func(reconnected bool)
 }
 
+// DefaultRetry is the shipped policy: three attempts per outage, with thirty
+// seconds of a held tunnel counting as the outage being over.
 func DefaultRetry() Retry {
 	return Retry{Max: 3, StableAfter: 30 * time.Second, Wait: wait}
 }
