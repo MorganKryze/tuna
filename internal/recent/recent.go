@@ -25,7 +25,11 @@ func Path() string {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(".local", "state", "tunny", "recent")
+		// No home means nowhere to look, and a relative path here would
+		// mean "wherever tunny happened to be started". That is not a
+		// fallback, it is reading the order file out of whatever directory
+		// somebody cd'd into. Rooting it keeps a miss a miss.
+		home = "/"
 	}
 	return filepath.Join(home, ".local", "state", "tunny", "recent")
 }
@@ -46,13 +50,39 @@ func Load(path string) []string {
 	return out
 }
 
-// Save creates the directory on the way: ~/.local/state/tunny does not exist
-// on a fresh machine.
+// Save writes the order, creating the directory on the way: ~/.local/state/tunny
+// does not exist on a fresh machine.
+//
+// Written to a temporary file and renamed, because rename replaces the file in
+// one step and a write does not. This runs immediately before a tunnel that
+// may stay open for hours, so the window between "truncated" and "written
+// again" is the window a laptop lid closes in. Load tolerates a torn file, but
+// it tolerates it by losing the order — which is the only thing this package
+// has.
+//
+// ponytail: no fsync. The order of a menu is not worth a disk flush, and the
+// failure it would protect against loses a list, not a tunnel.
 func Save(path string, names []string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte(strings.Join(names, "\n")+"\n"), 0o600)
+	// In the target's own directory: rename is only atomic within a
+	// filesystem, and the one /tmp is on is rarely the one $XDG_STATE_HOME is
+	// on. CreateTemp opens at 0600, which is the mode this file has to keep.
+	f, err := os.CreateTemp(dir, ".recent-*")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(f.Name()) }() // a no-op once the rename lands
+	if _, err := f.WriteString(strings.Join(names, "\n") + "\n"); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), path)
 }
 
 // Bump puts chosen at the front, removing any earlier mention of it.

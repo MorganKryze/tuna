@@ -76,3 +76,48 @@ func TestTheOrderFileIsNotWorldReadable(t *testing.T) {
 		t.Errorf("want mode 0600, got %#o", perm)
 	}
 }
+
+// The write goes through a temporary file, so the directory has to be left
+// holding the order and nothing else: a leftover .recent-* is a file nobody
+// cleans up and one more thing in a directory meant to be readable at a
+// glance.
+func TestSaveLeavesNothingBehind(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "recent")
+	for _, names := range [][]string{{"a", "b", "c"}, {"b"}} {
+		if err := Save(p, names); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "recent" {
+		var got []string
+		for _, e := range entries {
+			got = append(got, e.Name())
+		}
+		t.Errorf("want just the order file, got %v", got)
+	}
+	// A shorter list replaces the longer one whole rather than overwriting
+	// its first bytes, which is the other half of what rename buys.
+	if got := Load(p); !equal(got, []string{"b"}) {
+		t.Errorf("want [b], got %v", got)
+	}
+}
+
+// Same rule as the config path, for the same reason: a relative fallback
+// means the order file is whichever one is in the current directory.
+func TestThePathIsNeverRelative(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", "")
+	t.Setenv("HOME", "")
+	for _, k := range []string{"XDG_STATE_HOME", "HOME"} {
+		if err := os.Unsetenv(k); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := Path(); !filepath.IsAbs(got) {
+		t.Errorf("without HOME the path has to stay absolute, got %q", got)
+	}
+}
