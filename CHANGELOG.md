@@ -7,6 +7,66 @@ SPDX-License-Identifier: GPL-3.0-only
 
 Newest first. Dates are release dates.
 
+## v0.3.0 (unreleased)
+
+A pass over everything the packaging and code audits left open. Nothing about
+`destinations.toml` changed, and nothing about how tunnels behave.
+
+### ⚠️ Breaking
+
+- **The preview width is a flag.** `tunny --preview 80` becomes
+  `tunny --preview --width 80`. The width used to live in the same argument
+  slot as the destination name, so `tunny --preview prod` answered by talking
+  about column counts, and `--help` documented neither. The old form now says
+  where the width went. `--width` without `--preview` exits 2 rather than
+  being ignored.
+
+### 🐛 Fixes
+
+- **The list is measured in columns, not in runes.** An ideograph is one rune
+  and two columns, so a destination described in Japanese or Chinese made
+  every column budget come out twice as generous as the terminal is: the row
+  overflowed, the terminal wrapped it, and the redraw then erased the wrong
+  lines on every keystroke. Combining accents and joined emoji are counted the
+  way they draw as well.
+- **The list follows the window.** Resizing while the picker was open left the
+  old width's rows in the new width's terminal until the next keystroke.
+- **A local port held on `::1` is a port that is taken.** `ssh -L` binds
+  localhost, which is two addresses on any machine with IPv6; the check only
+  ever asked `127.0.0.1`, so the picker said go ahead to a forward that could
+  not bind. The check is also narrower now: only "address already in use"
+  counts, where any refusal used to — a machine with IPv6 switched off would
+  have reported every port taken, and a forward on a privileged port one held
+  by nobody.
+- **The recency order is replaced, not overwritten.** It was written in place
+  immediately before a tunnel that may stay open for hours, and the window
+  between truncated and written again is the window a laptop lid closes in.
+- **The backoff stops doubling**, at thirty seconds. Far enough out it
+  overflowed to a negative pause, which a timer fires immediately: the
+  backoff became a spin against a host that was already down.
+- **No `HOME` no longer means the working directory.** Both the config and the
+  order file fell back to a relative path, so tunny run from a service unit or
+  a cron job read `destinations.toml` out of whatever directory it started in.
+
+### 🧹 Internal
+
+- The state directory is created at 0700 rather than 0755. The file inside was
+  already 0600, and it lists which machines somebody administers.
+- Six more linters, and the ten exported identifiers, three shadowed builtins,
+  one unhandled enum case and one fragile error assertion they found. `misspell`
+  is back, now that nothing tunny prints is French.
+- A fuzz target for the picker, seeded with every input that has broken it
+  before. Its seeds run on every `go test`, thirty seconds of real fuzzing runs
+  in CI, and `just fuzz` runs longer.
+- Twelve `GOOS/GOARCH` pairs compile on every pull request. The release shipped
+  four binaries that nothing built until the tag was pushed, and `PACKAGING.md`
+  promises five operating systems.
+- `CONTRIBUTING.md` names the three things no test covers and how to check them
+  by hand.
+- `codeql-action` is grouped for dependabot: its two halves refuse to run at
+  different versions, so ungrouped it opened two pull requests that could only
+  pass together.
+
 ## v0.2.0 (2026-08-12)
 
 ### ⚠️ Breaking

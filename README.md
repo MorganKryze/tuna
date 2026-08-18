@@ -235,7 +235,7 @@ it at a size you do not own: `tunny --preview --width 60`.
 | Path | What |
 | --- | --- |
 | `~/.config/tunny/destinations.toml` | your destinations. `XDG_CONFIG_HOME` moves it. |
-| `~/.local/state/tunny/recent` | the recency order, one name per line, mode 0600. `XDG_STATE_HOME` moves it. |
+| `~/.local/state/tunny/recent` | the recency order, one name per line, mode 0600 in a 0700 directory. `XDG_STATE_HOME` moves it. |
 
 tunny writes nothing else, anywhere. It listens on nothing and opens no
 connection of its own: the only network traffic is `ssh`'s.

@@ -108,6 +108,12 @@ which is why the entire reconnection policy is tested in microseconds.
   needs ordinary echo. No test covers the flag, since checking it takes a pty
   and a real keystroke. Check it by hand against a build with the line removed,
   which is the only way to know the check would have failed.
+- **The layout is measured in columns.** Not bytes, not runes: `ui.Width` is
+  the only measure the picker is allowed to use, because every column budget
+  in `render.go` is a subtraction from it. A row measured narrower than it
+  draws wraps, a wrapped frame is taller than `Lines` counts it, and the
+  wind-back then erases the wrong lines on every keystroke. `ui.Fit` and
+  `ui.FitTail` are the only two ways to cut a string to a width.
 - **The pictures are generated, not taken.** `just shot` runs the binary,
   parses its escape codes and draws the SVGs, against
   `destinations.example.toml` in a throwaway XDG root. A screenshot of a real
@@ -129,6 +135,24 @@ which is why the entire reconnection policy is tested in microseconds.
   guards it.
 - **English everywhere.** The binary, the comments, the tests, the workflow
   notes. No error message carries an absolute path from a development machine.
+
+## What no test covers
+
+Three things, all in the fifty lines that hold a terminal, and all for the
+same reason: checking them takes a pty, a real keystroke and a fourth
+dependency. Run them by hand before cutting a release — each against a build
+with the line removed, which is the only way to know the check would have
+failed.
+
+| What | How |
+| --- | --- |
+| the picker's read-draw loop | `tunny` with no argument: arrows move, typing filters, Enter opens, Escape and Ctrl-C leave without one |
+| the redraw on resize | open the picker, drag the window narrower and wider; the list follows without tearing |
+| `ECHOCTL` | open a tunnel, press Ctrl-C: the screen shows tunny's closing line and no `^C` |
+
+Everything else is a pure function and arrives with its test. `just fuzz`
+runs the picker against inputs nobody would type, which is where the last two
+renderer bugs came from.
 
 ## Commits
 

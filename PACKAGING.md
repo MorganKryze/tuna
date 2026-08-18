@@ -35,7 +35,10 @@ No network, no TTY, no ssh server, no clock. The suite spawns a fake `ssh`
 shell script on a temporary `PATH` and binds ephemeral loopback ports; it is
 safe in a build chroot and suitable for a `check()` or an autopkgtest.
 
-`go test -race ./...` also passes, and CI runs it on linux and darwin.
+`go test -race ./...` also passes, and CI runs it on linux and darwin, along
+with a compile of every platform listed below and thirty seconds of fuzzing
+against the picker. The fuzz seed corpus runs as part of an ordinary
+`go test`, so a `check()` gets it for free.
 
 ## Runtime dependency
 
@@ -64,7 +67,7 @@ as the way to find what holds a busy port. Arch `optdepends`, Debian
 | `/usr/share/zsh/site-functions/_tunny` | from `completions/tunny.zsh` |
 | `/usr/share/fish/vendor_completions.d/tunny.fish` | from `completions/tunny.fish` |
 | `~/.config/tunny/destinations.toml` | user config, honours `XDG_CONFIG_HOME` |
-| `~/.local/state/tunny/recent` | user state, honours `XDG_STATE_HOME`, mode 0600 |
+| `~/.local/state/tunny/recent` | user state, honours `XDG_STATE_HOME`, mode 0600 in a 0700 directory |
 
 tunny creates the state directory itself and writes nothing outside the two
 XDG paths. It listens on nothing and makes no network connection of its own.
