@@ -131,3 +131,24 @@ func TestAMissingConfigSaysWhatToDoNext(t *testing.T) {
 		t.Errorf("an upgrading user needs the move command, got: %v", err)
 	}
 }
+
+// Neither path is ever allowed to be relative. Without a home directory the
+// fallback used to be ".config/tunny/destinations.toml", which is not a
+// fallback: it reads the config out of whatever directory tunny was started
+// in, so cd'ing into a directory somebody else can write to changes which
+// machines tunny will open a tunnel to.
+func TestThePathIsNeverRelative(t *testing.T) {
+	unset(t, "XDG_CONFIG_HOME")
+	unset(t, "HOME")
+	if got := Path(); !filepath.IsAbs(got) {
+		t.Errorf("without HOME the path has to stay absolute, got %q", got)
+	}
+}
+
+func unset(t *testing.T, key string) {
+	t.Helper()
+	t.Setenv(key, "") // registers the cleanup that puts the real value back
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatal(err)
+	}
+}

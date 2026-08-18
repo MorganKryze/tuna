@@ -48,8 +48,11 @@ func Path() string {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		// No home means no config to find; the caller reports the miss.
-		return filepath.Join(".config", "tunny", "destinations.toml")
+		// No home means nowhere to look, and a relative path here would
+		// mean "wherever tunny happened to be started". That is not a
+		// fallback, it is reading destinations.toml out of whatever directory
+		// somebody cd'd into. Rooting it keeps a miss a miss.
+		home = "/"
 	}
 	return filepath.Join(home, ".config", "tunny", "destinations.toml")
 }
