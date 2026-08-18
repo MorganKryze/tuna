@@ -79,13 +79,33 @@ func wait(ctx context.Context, d time.Duration) error {
 	}
 }
 
+// maxBackoff is where the doubling stops. Retry.Max is exported and nothing
+// bounds it, and shifting a second left often enough overflows to a negative
+// duration — which time.Timer fires immediately, turning the backoff into a
+// spin against a host that is already down.
+const maxBackoff = 30 * time.Second
+
 func backoff(attempt int) time.Duration {
-	return time.Second << (attempt - 1) // 1s, 2s, 4s
+	switch {
+	case attempt < 1:
+		return time.Second
+	case attempt >= 6: // 1s, 2s, 4s, 8s, 16s, then flat
+		return maxBackoff
+	}
+	return time.Second << (attempt - 1)
 }
 
 // Connect runs the tunnel and keeps it up. It returns nil when the operator
 // closed it, and an error when it gave up.
 func Connect(ctx context.Context, d *config.Destination, run Runner, r Retry) error {
+	// Retry is exported and built by hand — by the command, by --no-retry and
+	// by every test — so the two fields that can make it unusable are settled
+	// here rather than left to a nil call and a comparison against a negative.
+	if r.Wait == nil {
+		r.Wait = wait
+	}
+	r.Max = max(r.Max, 0)
+
 	attempts, launches := 0, 0
 	for {
 		reconnected := launches > 0

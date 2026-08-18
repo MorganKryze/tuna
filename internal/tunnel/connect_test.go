@@ -307,3 +307,52 @@ func TestCancellingDuringTheBackoffStopsTheLoop(t *testing.T) {
 		t.Fatalf("want 1 launch before the interrupted wait, got %d", f.calls)
 	}
 }
+
+// Retry.Max is exported and nothing bounds it. Doubling a second past the
+// width of an int64 gives a negative duration, and a timer set to a negative
+// duration fires at once: the backoff would become a spin against a host that
+// is already down, which is the one thing a backoff exists to prevent.
+func TestTheBackoffStopsDoubling(t *testing.T) {
+	for attempt := 1; attempt <= 200; attempt++ {
+		d := backoff(attempt)
+		if d <= 0 {
+			t.Fatalf("attempt %d: backoff %v, which a timer fires immediately", attempt, d)
+		}
+		if d > maxBackoff {
+			t.Fatalf("attempt %d: backoff %v is over the %v ceiling", attempt, d, maxBackoff)
+		}
+	}
+	if got := backoff(0); got <= 0 {
+		t.Errorf("backoff(0) = %v; a shift by a negative amount panics", got)
+	}
+}
+
+// A hand-built Retry with no Wait used to be a nil call, and a negative Max a
+// comparison that never came true. Neither is reachable from the command
+// today, which is exactly why they are worth pinning: the struct is exported.
+func TestAHandBuiltRetryIsUsable(t *testing.T) {
+	f := &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
+	err := Connect(t.Context(), &config.Destination{Name: "a"}, f.run, Retry{Max: -1})
+	if err == nil {
+		t.Fatal("a negative Max is no retries at all, so this has to give up")
+	}
+	// Unclamped it reads "gave up after -1 reconnection attempts", which is
+	// the count it did not make of the retries it never tried.
+	if got := err.Error(); !strings.Contains(got, "connection failed") {
+		t.Errorf("a negative Max has to read like no retries: %q", got)
+	}
+	if f.calls != 1 {
+		t.Errorf("want the one attempt, got %d", f.calls)
+	}
+
+	// And with a retry to make, so the nil Wait is actually reached. The
+	// deadline is what keeps this from being a real one-second backoff: the
+	// default Wait returns as soon as the context is done, which is the whole
+	// reason it takes one.
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+	f = &fake{script: []Result{{Lived: time.Second, Outcome: OutcomeFailed}}}
+	if err := Connect(ctx, &config.Destination{Name: "a"}, f.run, Retry{Max: 1}); err != nil {
+		t.Errorf("a backoff cut short is not a failure, got %v", err)
+	}
+}
