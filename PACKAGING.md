@@ -13,7 +13,7 @@ Patches are welcome, and so are questions: open an issue rather than guess.
 ## Build
 
 ```sh
-go build -trimpath -ldflags "-s -w -X main.version=v0.2.0" -o tunny ./cmd/tunny
+go build -trimpath -ldflags "-s -w -X main.version=v0.3.0" -o tunny ./cmd/tunny
 ```
 
 `-X main.version` is the only stamp tunny reads. Without it a build from a

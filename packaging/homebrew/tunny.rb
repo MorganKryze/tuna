@@ -7,8 +7,8 @@
 class Tunny < Formula
   desc "Pick your admin SSH tunnel from a list instead of remembering its name"
   homepage "https://github.com/MorganKryze/tunny"
-  url "https://github.com/MorganKryze/tunny/archive/refs/tags/v0.2.0.tar.gz"
-  sha256 "58856f37da835f0a9a8a38090fa0061e8cea9e8b0969cd220d571174e8067c46"
+  url "https://github.com/MorganKryze/tunny/archive/refs/tags/v0.3.0.tar.gz"
+  sha256 "b224ea6404d8f7fb98792207f71efc218e2a329465dd1850219aa42dad234c54"
   license "GPL-3.0-only"
   head "https://github.com/MorganKryze/tunny.git", branch: "main"
 

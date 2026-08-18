@@ -13,13 +13,13 @@
 
 buildGoModule (finalAttrs: {
   pname = "tunny";
-  version = "0.2.0";
+  version = "0.3.0";
 
   src = fetchFromGitHub {
     owner = "MorganKryze";
     repo = "tunny";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-PY721M+2B0R1cHaBvSx+TELynR1qj1qbWoNNf0T8IIA=";
+    hash = "sha256-LLw2V0koFQ93vhGz0Cadyf44SsCT8z80hU7ZX6Xx//Q=";
   };
 
   vendorHash = "sha256-wXOe0s7HqXmpEUx+bWe17epdPf6GJ1G3i8RyU87gXXY=";

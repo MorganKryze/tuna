@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Maintainer: Morgan Kryze <contact@libresoftware.cloud>
 pkgname=tunny
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="Pick your admin SSH tunnel from a list instead of remembering its name"
 arch=('x86_64' 'aarch64')
@@ -12,7 +12,7 @@ depends=('openssh' 'glibc')
 makedepends=('go')
 optdepends=('lsof: name what holds a busy local port')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('58856f37da835f0a9a8a38090fa0061e8cea9e8b0969cd220d571174e8067c46')
+sha256sums=('b224ea6404d8f7fb98792207f71efc218e2a329465dd1850219aa42dad234c54')
 
 build() {
   cd "$pkgname-$pkgver"
