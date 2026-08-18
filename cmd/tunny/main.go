@@ -70,6 +70,7 @@ func main() {
   tunny --no-retry   do not relaunch if it drops
   tunny --preview    see what the list looks like, without opening anything
   tunny --width N    with --preview, draw at N columns instead of this terminal's
+  tunny --list       destination names, one per line, for shell completion
   tunny --version    print the version and exit
 
 Config: %s
