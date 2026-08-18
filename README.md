@@ -227,8 +227,8 @@ terminal narrows: port labels first, then the ports, then the descriptions, so
 no line ever wraps. Closing a tunnel leaves no `^C` on screen, because tunny
 clears the terminal flag that echoes it and puts it back on the way out.
 
-`tunny --preview` prints the list without opening anything, and takes a width so
-you can check the layout at a size you do not own: `tunny --preview 60`.
+`tunny --preview` prints the list without opening anything, and `--width` draws
+it at a size you do not own: `tunny --preview --width 60`.
 
 ## Files, environment and exit codes
 

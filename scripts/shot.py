@@ -118,7 +118,7 @@ def frames_of(binary, cols):
         shutil.copy(root / "destinations.example.toml", cfg / "destinations.toml")
         env = {k: v for k, v in os.environ.items() if k != "NO_COLOR"}
         proc = subprocess.run(
-            [binary, "--preview", str(cols)],
+            [binary, "--preview", "--width", str(cols)],
             capture_output=True,
             text=True,
             check=True,

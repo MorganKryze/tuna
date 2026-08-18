@@ -39,10 +39,21 @@ all keep working the way you configured them.
 .B \-\-no\-retry
 One attempt. Do not relaunch if the tunnel drops.
 .TP
-.BI \-\-preview " width"
+.B \-\-preview
 Print what the picker would show and exit, without opening anything or writing
-any state. An optional width, at least 20, draws the layout at a size other
-than this terminal's.
+any state.
+.TP
+.BI \-\-width " n"
+With
+.BR \-\-preview ,
+draw the layout at
+.I n
+columns instead of this terminal's. At least 20.
+.TP
+.B \-\-list
+Print destination names, one per line, and exit. This is what the shell
+completions read; there is no human-facing list command, because the picker is
+the list.
 .TP
 .B \-\-version
 Print the version on standard output and exit.

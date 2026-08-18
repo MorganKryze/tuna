@@ -19,7 +19,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -60,6 +59,7 @@ func buildVersion() string {
 func main() {
 	noRetry := flag.Bool("no-retry", false, "one attempt, no reconnection")
 	preview := flag.Bool("preview", false, "print the list without opening anything, then exit")
+	width := flag.Int("width", 0, "with --preview, draw at this width instead of the terminal's")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	list := flag.Bool("list", false, "print destination names, one per line, for shell completion")
 	flag.Usage = func() {
@@ -69,6 +69,7 @@ func main() {
   tunny <name>       go straight to it
   tunny --no-retry   do not relaunch if it drops
   tunny --preview    see what the list looks like, without opening anything
+  tunny --width N    with --preview, draw at N columns instead of this terminal's
   tunny --version    print the version and exit
 
 Config: %s
@@ -104,11 +105,18 @@ Config: %s
 	}
 
 	if *preview {
-		if err := showPreview(); err != nil {
+		if err := showPreview(*width, flag.Arg(0)); err != nil {
 			fmt.Fprintf(os.Stderr, "tunny: %v\n", err)
 			os.Exit(1)
 		}
 		return
+	}
+
+	// --width is only ever a modifier for --preview, and silently ignoring a
+	// flag somebody typed is how a flag gets typed again next time.
+	if *width != 0 {
+		fmt.Fprintln(os.Stderr, "tunny: --width only means something with --preview")
+		os.Exit(2)
 	}
 
 	// One place owns "the operator wants out", and it covers every way of
@@ -131,7 +139,19 @@ Config: %s
 // showPreview draws the picker without opening it, at the real terminal's
 // width when there is one and at 80 columns when there is not, so the output
 // is the same whether a human is looking or a test is capturing it.
-func showPreview() error {
+func showPreview(want int, arg string) error {
+	// --preview used to take its width as a positional argument, which is
+	// the same slot the destination name lives in: `tunny --preview prod`
+	// answered by talking about column counts. Say where the width went
+	// instead of guessing which of the two was meant.
+	if arg != "" {
+		return fmt.Errorf("--preview takes no argument; for a width, --width %s", arg)
+	}
+	// An explicit width is how the narrow-terminal fallbacks get looked at
+	// without owning a narrow terminal: `tunny --preview --width 60`.
+	if want != 0 && want < 20 {
+		return fmt.Errorf("--width %d: expected at least 20", want)
+	}
 	cfg, err := config.Load(config.Path())
 	if err != nil {
 		return err
@@ -140,14 +160,8 @@ func showPreview() error {
 	if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
 		width, height = w, h
 	}
-	// An explicit width is how the narrow-terminal fallbacks get looked at
-	// without owning a narrow terminal: `tunny --preview 60`.
-	if arg := flag.Arg(0); arg != "" {
-		w, err := strconv.Atoi(arg)
-		if err != nil || w < 20 {
-			return fmt.Errorf("width %q: expected a number of at least 20", arg)
-		}
-		width = w
+	if want != 0 {
+		width = want
 	}
 	ordered := recent.Order(cfg.Destination, recent.Load(recent.Path()))
 	fmt.Print(pick.Preview(ordered, port.BusyIn(ordered), width, height, ui.ColorOK(os.Stdout)))

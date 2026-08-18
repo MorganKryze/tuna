@@ -7,7 +7,7 @@
 _tunny() {
     local cur=${COMP_WORDS[COMP_CWORD]}
     if [[ $cur == -* ]]; then
-        COMPREPLY=($(compgen -W '--no-retry --preview --version --help' -- "$cur"))
+        COMPREPLY=($(compgen -W '--no-retry --preview --width --list --version --help' -- "$cur"))
         return
     fi
     COMPREPLY=($(compgen -W "$(tunny --list 2>/dev/null)" -- "$cur"))

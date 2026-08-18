@@ -133,7 +133,7 @@ with the version.
 
 ```sh
 tunny --version          # bare version on stdout, exit 0
-tunny --preview 80       # draws the list, exits 0, touches nothing
+tunny --preview          # draws the list, exits 0, touches nothing
 ```
 
 `--preview` reads the config and prints what the picker would show, without

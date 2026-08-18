@@ -5,5 +5,7 @@ complete -c tunny -f
 complete -c tunny -n __fish_use_subcommand -a '(tunny --list 2>/dev/null)' -d destination
 complete -c tunny -l no-retry -d 'one attempt, no reconnection'
 complete -c tunny -l preview  -d 'print the list without opening anything'
+complete -c tunny -l width -r -d 'with --preview, draw at this many columns'
+complete -c tunny -l list     -d 'print destination names, one per line'
 complete -c tunny -l version  -d 'print the version and exit'
 complete -c tunny -s h -l help -d 'print a usage summary'

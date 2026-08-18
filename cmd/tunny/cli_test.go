@@ -95,12 +95,25 @@ func TestTheCommandLineSurface(t *testing.T) {
 		},
 		{
 			name: "preview draws without opening anything",
-			args: []string{"--preview", "80"}, config: twoDestinations, wantOut: "the first one",
+			args: []string{"--preview", "--width", "80"}, config: twoDestinations, wantOut: "the first one",
 		},
 		{
 			name: "a width below the minimum is refused, not drawn badly",
-			args: []string{"--preview", "5"}, config: twoDestinations,
+			args: []string{"--preview", "--width", "5"}, config: twoDestinations,
 			wantExit: 1, wantErr: "at least 20",
+		},
+		{
+			// The width used to be a positional argument, in the same slot
+			// the destination name lives in. Somebody who typed it that way
+			// gets told where it went rather than a guess at which was meant.
+			name: "the old positional width says where the width went",
+			args: []string{"--preview", "80"}, config: twoDestinations,
+			wantExit: 1, wantErr: "--width 80",
+		},
+		{
+			name: "a width without a preview is a typo, not a no-op",
+			args: []string{"--width", "60", "alpha"}, config: twoDestinations,
+			wantExit: 2, wantErr: "only means something with --preview",
 		},
 		{
 			name: "an unknown destination lists the known ones",
@@ -175,7 +188,7 @@ func TestPreviewWritesNothing(t *testing.T) {
 		}
 	}
 
-	cmd := exec.Command(bin, "--preview", "80")
+	cmd := exec.Command(bin, "--preview", "--width", "80")
 	cmd.Env = env
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("preview failed: %v\n%s", err, out)
