@@ -78,7 +78,16 @@ jobs:
   homebrew:
     needs: binaries
     runs-on: ubuntu-latest
-    if: ${{ !github.event.release.prerelease }}
+    # Stable tags only. This used to read `!github.event.release.prerelease`,
+    # which never once did anything: the trigger above is a tag push, and a
+    # push payload has no `release` key, so the expression was `!null` — true
+    # for every tag there is. A `v0.4.0-rc1` would have gone straight into the
+    # tap and `brew upgrade` would have handed it to everybody.
+    #
+    # The tag name is the thing this job actually has, so it is the thing to
+    # ask. Semver puts a prerelease after a hyphen and nowhere else, and build
+    # metadata after a plus, which is still a release.
+    if: ${{ !contains(github.ref_name, '-') }}
     # At job level so the step's own `if` can see it: a step cannot read the
     # env block it declares itself.
     env:
