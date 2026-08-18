@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-only
 
 Newest first. Dates are release dates.
 
-## v0.3.0 (unreleased)
+## v0.3.0 (2026-08-18)
 
 A pass over everything the packaging and code audits left open. Nothing about
 `destinations.toml` changed, and nothing about how tunnels behave.

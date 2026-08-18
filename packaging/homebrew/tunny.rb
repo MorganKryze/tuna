@@ -50,7 +50,7 @@ class Tunny < Formula
       forward = [{ local = 19999, to = "127.0.0.1:1", label = "Thing" }]
     TOML
     with_env(XDG_CONFIG_HOME: testpath/"cfg", XDG_STATE_HOME: testpath/"state") do
-      assert_match "example", shell_output("#{bin}/tunny --preview 80")
+      assert_match "example", shell_output("#{bin}/tunny --preview --width 80")
       assert_equal "example\n", shell_output("#{bin}/tunny --list")
     end
   end
