@@ -66,3 +66,58 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
           fi
+
+  # Bumps the formula in the tap so `brew upgrade` sees a new version without
+  # anyone editing a file. Separate job: a failure here must not cast doubt on
+  # binaries that are already published and attested.
+  #
+  # Needs TAP_TOKEN, a fine-grained PAT with Contents: read and write on
+  # MorganKryze/homebrew-tap. github.token cannot reach another repository.
+  # Without the secret the job is skipped rather than failed, so the release
+  # still succeeds on a fork or before the token exists.
+  homebrew:
+    needs: binaries
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.release.prerelease }}
+    # At job level so the step's own `if` can see it: a step cannot read the
+    # env block it declares itself.
+    env:
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: render the formula for this tag
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          # The checksum comes from the tarball GitHub serves, not from one we
+          # rebuild: it is the file Homebrew will actually download.
+          sha=$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)
+          echo "rendering $version, sha256 $sha"
+          sed -E \
+            -e "s|^  url \".*\"|  url \"$url\"|" \
+            -e "s|^  sha256 \".*\"|  sha256 \"$sha\"|" \
+            packaging/homebrew/tunny.rb > /tmp/tunny.rb
+          ruby -c /tmp/tunny.rb
+          # A formula whose url and sha did not both change is a formula that
+          # would install the previous release under the new name.
+          grep -q "$sha" /tmp/tunny.rb && grep -q "$GITHUB_REF_NAME.tar.gz" /tmp/tunny.rb
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: push it to the tap
+        if: ${{ env.TAP_TOKEN != '' }}
+        run: |
+          set -eu
+          git clone --depth 1 \
+            "https://x-access-token:${TAP_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/homebrew-tap.git" tap
+          cp /tmp/tunny.rb tap/Formula/tunny.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "formula already at $VERSION"
+            exit 0
+          fi
+          git commit -qam "tunny $VERSION"
+          git push

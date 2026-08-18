@@ -32,12 +32,22 @@ tunny is that `justfile`, with the names on screen and a tunnel that comes back.
 ## Install
 
 ```sh
+brew install MorganKryze/tap/tunny
+```
+
+That is the only packaged route for now. It works on macOS and on Linuxbrew,
+and it brings the man page and the shell completions with it.
+
+Otherwise, a binary from the [Releases](https://github.com/MorganKryze/tunny/releases)
+page (darwin and linux, amd64 and arm64, with a `SHA256SUMS` and a build
+attestation next to them), or from source:
+
+```sh
 go install github.com/MorganKryze/tunny/cmd/tunny@latest
 ```
 
-Or take a binary from the [Releases](https://github.com/MorganKryze/tunny/releases)
-page: darwin and linux, amd64 and arm64, with a `SHA256SUMS` and a build
-attestation next to them.
+AUR, nixpkgs and Debian are not done yet. [`packaging/`](packaging) holds a
+working recipe for each, if you want to get there first.
 
 ## Requirements
 

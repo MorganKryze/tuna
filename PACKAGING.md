@@ -122,7 +122,7 @@ so they move with it:
 
 | File | State |
 | --- | --- |
-| `packaging/homebrew/tunny.rb` | formula for a tap. Its `install` and `test do` blocks were run by hand against the v0.2.0 tarball. |
+| `packaging/homebrew/tunny.rb` | formula for a tap, and the template the release workflow renders. It rewrites `url` and `sha256` for the new tag and pushes the result to `MorganKryze/homebrew-tap`, so a release bumps the formula on its own. |
 | `packaging/aur/PKGBUILD` | its `build()` and `check()` were run; `makepkg` itself was not, for want of an Arch machine. |
 | `packaging/nix/tunny.nix` | built with `nix-build` end to end: binary, man page, three completions, example config, and the openssh wrapper. |
 
