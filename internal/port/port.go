@@ -10,22 +10,38 @@
 package port
 
 import (
-	"fmt"
+	"errors"
 	"net"
+	"strconv"
+	"syscall"
 
 	"github.com/MorganKryze/tunny/internal/config"
 )
 
-// Busy reports whether something is already listening on 127.0.0.1:n.
+// Busy reports whether something is already listening on the local port.
 //
-// The probe is a bind, which is the same syscall ssh -L is about to make:
+// Both loopback addresses, because ssh -L binds "localhost" and localhost is
+// two addresses on any machine with IPv6: a port held on ::1 alone reads as
+// free on 127.0.0.1 and the picker then says go ahead to a forward that will
+// not bind.
+func Busy(n int) bool {
+	return taken("127.0.0.1", n) || taken("[::1]", n)
+}
+
+// taken reports whether addr refuses a bind because something is already
+// there. Any other refusal is not this function's business and is not "busy":
+// a machine with IPv6 switched off refuses every bind to ::1, and a port under
+// 1024 refuses one from a user who is not root. Reporting either as busy would
+// name a culprit that does not exist and send somebody to lsof to look for it.
+//
+// The probe is a bind, which is the same syscall ssh is about to make:
 // anything cheaper would be a guess about somebody else's socket. Go sets
 // SO_REUSEADDR on its listeners, so a port left in TIME_WAIT does not read as
 // busy while a port genuinely being listened on does.
-func Busy(n int) bool {
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", n))
+func taken(addr string, n int) bool {
+	l, err := net.Listen("tcp", addr+":"+strconv.Itoa(n))
 	if err != nil {
-		return true
+		return errors.Is(err, syscall.EADDRINUSE)
 	}
 	// ponytail: held for the microsecond between Listen and Close, which is
 	// a race nobody can lose in practice — and losing it costs a retry, not

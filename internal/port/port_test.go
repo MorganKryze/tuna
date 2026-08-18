@@ -79,3 +79,29 @@ func TestBusyInReportsOnlyWhatIsTaken(t *testing.T) {
 		t.Errorf("want %v for the taken destination, got %v", want, got["taken"])
 	}
 }
+
+// A port held on ::1 alone used to read as free, because the probe only ever
+// asked 127.0.0.1. ssh -L binds "localhost", which is both addresses on any
+// machine with IPv6, so the picker said go ahead to a forward that could not
+// bind and ssh found out afterwards.
+func TestBusySeesAListenerOnTheIPv6Loopback(t *testing.T) {
+	l, err := net.Listen("tcp", "[::1]:0")
+	if err != nil {
+		t.Skipf("no IPv6 loopback here: %v", err)
+	}
+	t.Cleanup(func() { _ = l.Close() })
+	if n := l.Addr().(*net.TCPAddr).Port; !Busy(n) {
+		t.Errorf("port %d is being listened on over ::1, Busy has to say true", n)
+	}
+}
+
+// A bind is refused for reasons that have nothing to do with the port being
+// taken, and the difference is the whole value of the answer: "busy" names a
+// culprit and sends somebody to lsof to find it. 192.0.2.1 is TEST-NET-1 and
+// is not an address of this machine, so the kernel refuses every bind to it —
+// the same refusal a machine with IPv6 switched off gives for ::1.
+func TestAnUnbindableAddressIsNotAPortInUse(t *testing.T) {
+	if taken("192.0.2.1", free(t)) {
+		t.Error("an address this machine does not have is not a port in use")
+	}
+}
